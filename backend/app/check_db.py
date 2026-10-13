@@ -1,0 +1,15 @@
+from sqlalchemy import text
+
+from app.core.db import engine
+
+
+def main():
+    with engine.connect() as connection:
+        result = connection.execute(
+            text("SELECT 1")
+        )
+        print("Database connection successful:", result.scalar())
+
+
+if __name__ == "__main__":
+    main()
