@@ -1,11 +1,15 @@
+
 from fastapi import FastAPI
 
-app=FastAPI()
+from app.routes.auth import router as auth_router
 
-@app.get('/')
+app = FastAPI(title="Atomos API")
+
+# Existing health-check endpoint
+@app.get("/")
 def home():
-    print("system working")
-    return{"message":"system working"}
+    return {"message": "system working"}
 
+# Authentication endpoints
+app.include_router(auth_router)
 
-    
