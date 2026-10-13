@@ -13,6 +13,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    session_cookie_secure: bool = False
+
     @property
     def database_url(self) -> str:
         return self.neon_database_url
