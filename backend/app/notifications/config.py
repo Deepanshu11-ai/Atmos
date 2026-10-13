@@ -29,7 +29,7 @@ class NotificationSettings(BaseSettings):
     # --- alert rules ---
     WARN_PCT: float = 70          # itna % use hone par WARNING
     CRITICAL_PCT: float = 90      # itna % par CRITICAL
-    ALERT_TONE: str = "friendly"  # friendly | roast
+    ALERT_TONE: str = "formal"  # friendly | roast
     REMINDER_HOURS: int = 24      # EXCEEDED mein kitne ghante baad reminder
     CRON_SECRET: str = "change-me"
 
