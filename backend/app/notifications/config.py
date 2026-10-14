@@ -6,6 +6,7 @@ extra='ignore' se .env mein dusron ke variables hone par error nahi aata.
 root wali ko override karti hai."""
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Is file ka path: Atmos/backend/app/notifications/config.py
@@ -15,7 +16,6 @@ ROOT_DIR = BACKEND_DIR.parent                       # .../Atmos
 
 class NotificationSettings(BaseSettings):
     # Tuple mein baad wali file pehle wali ko override karti hai.
-    # Isse chahe terminal kisi bhi folder se chalao, .env mil jayegi.
     model_config = SettingsConfigDict(
         env_file=(ROOT_DIR / ".env", BACKEND_DIR / ".env"),
         extra="ignore",
@@ -29,7 +29,7 @@ class NotificationSettings(BaseSettings):
     # --- alert rules ---
     WARN_PCT: float = 70          # itna % use hone par WARNING
     CRITICAL_PCT: float = 90      # itna % par CRITICAL
-    ALERT_TONE: str = "formal"  # friendly | roast
+    ALERT_TONE: str = "formal"    # friendly | roast | formal (rules.py ke hisaab se)
     REMINDER_HOURS: int = 24      # EXCEEDED mein kitne ghante baad reminder
     CRON_SECRET: str = "change-me"
 
@@ -46,12 +46,25 @@ class NotificationSettings(BaseSettings):
     WHATSAPP_PROVIDER: str = "twilio"  # twilio | meta
     TWILIO_ACCOUNT_SID: str = ""
     TWILIO_AUTH_TOKEN: str = ""
-    TWILIO_WHATSAPP_FROM: str = "whatsapp:+14155238886"
+    TWILIO_WHATSAPP_FROM: str = "whatsapp:+14155238886"   # sandbox number
+    TWILIO_CONTENT_SID: str = ""
     META_ACCESS_TOKEN: str = ""
     META_PHONE_NUMBER_ID: str = ""
     META_API_VERSION: str = "v21.0"
     META_TEMPLATE_NAME: str = "budget_alert"
     META_TEMPLATE_LANG: str = "en"
+
+    @field_validator("DEV_TEST_PHONE", "TWILIO_WHATSAPP_FROM")
+    @classmethod
+    def _clean_phone(cls, v: str) -> str:
+        return "".join(v.split())          # saare spaces hata do
+
+    @field_validator("TWILIO_WHATSAPP_FROM")
+    @classmethod
+    def _wa_prefix(cls, v: str) -> str:
+        if v and not v.startswith("whatsapp:"):
+            v = "whatsapp:" + v
+        return v
 
 
 settings = NotificationSettings()
