@@ -1,6 +1,4 @@
-$root = git rev-parse --show-toplevel
 
-@"
 # Environment secrets
 .env
 .env.*
@@ -13,6 +11,8 @@ __pycache__/
 venv/
 env/
 
+# Pytest
+.pytest_cache/
+
 # Temporary migration files
 backend/temp_alembic/
-"@ | Set-Content "$root\.gitignore"
