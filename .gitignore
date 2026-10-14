@@ -10,6 +10,9 @@ __pycache__/
 venv/
 env/
 
+# Pytest
+.pytest_cache/
+
 # Temporary migration files
 backend/temp_alembic/
 __pycache__/
