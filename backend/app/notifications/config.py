@@ -21,7 +21,7 @@ class NotificationSettings(BaseSettings):
         extra="ignore",
     )
 
-    # --- mode: True = teammates ke fake versions (sirf development) ---
+    # --- mode: True = teammates ke fake versions (sirf standalone development) ---
     USE_STUBS: bool = False
     DEV_TEST_EMAIL: str = ""
     DEV_TEST_PHONE: str = ""
@@ -29,9 +29,20 @@ class NotificationSettings(BaseSettings):
     # --- alert rules ---
     WARN_PCT: float = 70          # itna % use hone par WARNING
     CRITICAL_PCT: float = 90      # itna % par CRITICAL
-    ALERT_TONE: str = "formal"    # friendly | roast | formal (rules.py ke hisaab se)
+    ALERT_TONE: str = "formal"    # templates.py ke hisaab se
     REMINDER_HOURS: int = 24      # EXCEEDED mein kitne ghante baad reminder
     CRON_SECRET: str = "change-me"
+
+    # --- teammates ke data se jodna (bills, users, roles) ---
+    BUDGET_UNIT: str = "kg CO2e"       # bills.carbon_emitted ki unit; messages mein dikhegi
+    BUDGET_PERIOD: str = "all"         # all | month | quarter | year (kitne time ka usage gino)
+    DEFAULT_DEPT_BUDGET: float = 0     # 0 = default nahi: budget set na ho to alert skip
+    EXCLUDE_SUSPICIOUS: bool = False   # True: is_suspicious bills usage mein na ginein
+    BILL_STATUSES: str = ""            # comma list (jaise "approved,paid"); khali = saare bills
+    AUTO_TRIGGER: bool = True          # bills commit hote hi automatic check
+    ADMIN_ROLES: str = "admin"
+    MANAGER_ROLES: str = "manager,compliance_manager,department_manager,dept_manager"
+    DATA_OFFICER_ROLES: str = "data_officer"
 
     # --- email ---
     EMAIL_PROVIDER: str = "smtp"  # smtp | brevo

@@ -2,6 +2,8 @@ import os
 
 # Import se PEHLE set hona chahiye, isliye sabse upar
 os.environ["USE_STUBS"] = "true"
+os.environ["DEV_TEST_EMAIL"] = "test@example.com"
+os.environ["DEV_TEST_PHONE"] = "+910000000000"
 
 import pytest
 

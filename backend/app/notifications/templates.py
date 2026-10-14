@@ -52,28 +52,37 @@ TEMPLATES = {
 }
 
 # ---------------- WhatsApp (chhote messages) ----------------
-WHATSAPP = {
-    "WARNING": (
-        "*Atmos | Carbon Budget Advisory*\n"
-        "The {dept} department has used {pct}% of its carbon budget "
-        "({used} of {budget} {unit}). Remaining: {remaining} {unit}.\n"
-        "Please review current emissions and plan corrective action. "
-        "Details are available on the Atmos dashboard."
-    ),
-    "CRITICAL": (
-        "*Atmos | Action Required*\n"
-        "The {dept} department has used {pct}% of its carbon budget. "
-        "Remaining: {remaining} {unit}.\n"
-        "An immediate review is recommended to avoid restrictions on the department."
-    ),
-    "EXCEEDED": (
-        "*Atmos | Carbon Budget Exceeded*\n"
-        "The {dept} department has exhausted its carbon budget "
-        "({used} of {budget} {unit}) and has been locked.\n"
-        "Please contact the administrator to request additional credits."
-    ),
+# ---------------- WhatsApp ----------------
+# Yeh text Twilio Content Template ki body se EXACT match hona chahiye:
+# "Atmos Carbon Management Platform: {{1}}. The {{2}} department has used {{3}}% of its
+#  allocated carbon budget. Remaining: {{4}}. Please review the Atmos dashboard for details."
+WA_TEXT = (
+    "Atmos Carbon Management Platform: {label}. The {dept} department has used "
+    "{pct}% of its allocated carbon budget. Remaining: {remaining}. "
+    "Please review the Atmos dashboard for details."
+)
+WA_LABELS = {
+    "WARNING": "Carbon budget advisory",
+    "CRITICAL": "Action required",
+    "EXCEEDED": "Carbon budget exceeded",
 }
 
+
+def whatsapp_params(level_name: str, ctx: dict) -> list[str]:
+    """Template variables {{1}}..{{4}} ka fixed order."""
+    c = _with_unit(ctx)
+    return [
+        WA_LABELS[level_name],
+        str(c["dept"]),
+        str(c["pct"]),
+        f'{c["remaining"]} {c["unit"]}',
+    ]
+
+
+def build_whatsapp(level_name: str, ctx: dict) -> str:
+    """Template ka rendered text (free-form body aur log, dono ke liye)."""
+    label, dept, pct, remaining = whatsapp_params(level_name, ctx)
+    return WA_TEXT.format(label=label, dept=dept, pct=pct, remaining=remaining)
 
 def _with_unit(ctx: dict) -> dict:
     return {"unit": UNIT, **ctx}
@@ -84,11 +93,6 @@ def build_message(tone: str, level_name: str, ctx: dict) -> tuple[str, str]:
     subject, body = TEMPLATES.get(tone, TEMPLATES[DEFAULT_TONE])[level_name]
     ctx = _with_unit(ctx)
     return subject.format(**ctx), body.format(**ctx)
-
-
-def build_whatsapp(level_name: str, ctx: dict) -> str:
-    """WhatsApp ke liye chhota text."""
-    return WHATSAPP[level_name].format(**_with_unit(ctx))
 
 
 def to_html(subject: str, body: str, level_name: str, ctx: dict | None = None) -> str:
