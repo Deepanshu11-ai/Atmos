@@ -1,0 +1,84 @@
+{
+  "dataset_notice": "Synthetic test data only; not real business evidence.",
+  "organization": {
+    "name": "Northstar Components Pvt. Ltd.",
+    "fictional": true,
+    "location": "Ludhiana, Punjab, India"
+  },
+  "records": [
+    {
+      "record_id": "ACT-001",
+      "period": "2026-09",
+      "activity": "purchased_grid_electricity",
+      "quantity": 12500,
+      "unit": "kWh",
+      "evidence": "01_electricity_bill_sample.pdf",
+      "scope_candidate": "Scope 2"
+    },
+    {
+      "record_id": "ACT-002",
+      "period": "2026-10",
+      "activity": "diesel_generator_combustion",
+      "quantity": 148,
+      "unit": "litres",
+      "evidence": "06_generator_log_sample.pdf",
+      "scope_candidate": "Scope 1"
+    },
+    {
+      "record_id": "ACT-003",
+      "period": "2026-10",
+      "activity": "inbound_road_freight",
+      "quantity": 896,
+      "unit": "tonne-km",
+      "evidence": "03_freight_invoice_sample.pdf",
+      "scope_candidate": "Scope 3"
+    },
+    {
+      "record_id": "ACT-004",
+      "period": "2026-09",
+      "activity": "mixed_waste_landfill",
+      "quantity": 640,
+      "unit": "kg",
+      "evidence": "04_waste_transfer_record_sample.pdf",
+      "scope_candidate": "Scope 3"
+    },
+    {
+      "record_id": "ACT-005",
+      "period": "2026-09",
+      "activity": "cardboard_recycling",
+      "quantity": 185,
+      "unit": "kg",
+      "evidence": "04_waste_transfer_record_sample.pdf",
+      "scope_candidate": "Scope 3"
+    },
+    {
+      "record_id": "ACT-006",
+      "period": "2026-09",
+      "activity": "scrap_metal_recycling",
+      "quantity": 920,
+      "unit": "kg",
+      "evidence": "04_waste_transfer_record_sample.pdf",
+      "scope_candidate": "Scope 3"
+    },
+    {
+      "record_id": "ACT-007",
+      "period": "2026-10",
+      "activity": "steel_purchase",
+      "quantity": 2400,
+      "unit": "kg",
+      "evidence": "05_raw_material_purchase_invoice_sample.pdf",
+      "scope_candidate": "Scope 3"
+    },
+    {
+      "record_id": "ACT-008",
+      "period": "2026-10",
+      "activity": "polypropylene_purchase",
+      "quantity": 750,
+      "unit": "kg",
+      "evidence": "05_raw_material_purchase_invoice_sample.pdf",
+      "scope_candidate": "Scope 3"
+    }
+  ],
+  "emission_factors": [],
+  "note": "Populate emission_factors with a documented, applicable factor source before calculating emissions."
+}
