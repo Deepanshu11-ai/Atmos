@@ -1,0 +1,265 @@
+{
+  "info": {
+    "name": "Signup, Departments and Credits - Complete Workflow",
+    "description": "Run requests in order. The collection signs up an owner, creates their first department and a second department, adds a user, buys credits and tests permissions. No pre-existing admin is needed; purchases do not charge a payment method.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 - View credit plans",
+      "request": { "method": "GET", "url": "{{baseUrl}}/credits/plans" },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Credit plans return 200', () => pm.response.to.have.status(200));"
+      ] } }]
+    },
+    {
+      "name": "02 - Sign up without a department",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"name\":\"Postman Owner\",\"email\":\"{{ownerEmail}}\",\"password\":\"{{ownerPassword}}\"}" },
+        "url": "{{baseUrl}}/auth/register"
+      },
+      "event": [
+        { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+          "const suffix = Date.now() + '.' + Math.floor(Math.random() * 1000000);",
+          "pm.collectionVariables.set('ownerEmail', 'postman.owner.' + suffix + '@example.com');",
+          "pm.collectionVariables.set('employeeEmail', 'postman.employee.' + suffix + '@example.com');",
+          "pm.collectionVariables.set('firstDepartmentName', 'Postman Home ' + suffix);",
+          "pm.collectionVariables.set('secondDepartmentName', 'Postman Sales ' + suffix);",
+          "pm.collectionVariables.unset('ownerToken');",
+          "pm.collectionVariables.unset('employeeToken');"
+        ] } },
+        { "listen": "test", "script": { "type": "text/javascript", "exec": [
+          "pm.test('Public signup returns 201', () => pm.response.to.have.status(201));",
+          "if (pm.response.code === 201) { pm.test('New owner has no department yet', () => { pm.expect(pm.response.json().role).to.eql('admin'); pm.expect(pm.response.json().department_id).to.eql(null); }); } else { pm.execution.setNextRequest(null); }"
+        ] } }
+      ]
+    },
+    {
+      "name": "03 - New owner logs in",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"email\":\"{{ownerEmail}}\",\"password\":\"{{ownerPassword}}\"}" },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Owner login returns 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) { pm.collectionVariables.set('ownerToken', pm.response.json().access_token); } else { pm.execution.setNextRequest(null); }"
+      ] } }]
+    },
+    {
+      "name": "04 - Owner creates their first department",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"name\":\"{{firstDepartmentName}}\"}" },
+        "url": "{{baseUrl}}/admin/departments"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Department created with 201', () => pm.response.to.have.status(201));",
+        "if (pm.response.code === 201) { pm.collectionVariables.set('firstDepartmentId', pm.response.json().id); } else { pm.execution.setNextRequest(null); }"
+      ] } }]
+    },
+    {
+      "name": "04b - Owner creates a second department",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"name\":\"{{secondDepartmentName}}\"}" },
+        "url": "{{baseUrl}}/admin/departments"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Second department created with 201', () => pm.response.to.have.status(201));",
+        "if (pm.response.code === 201) { pm.collectionVariables.set('secondDepartmentId', pm.response.json().id); } else { pm.execution.setNextRequest(null); }"
+      ] } }]
+    },
+    {
+      "name": "05 - Owner lists departments",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/admin/departments"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('List returns 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) { pm.test('Owner has both departments', () => { const ids = pm.response.json().map(dept => dept.id); pm.expect(ids).to.include(Number(pm.collectionVariables.get('firstDepartmentId'))); pm.expect(ids).to.include(Number(pm.collectionVariables.get('secondDepartmentId'))); }); }"
+      ] } }]
+    },
+    {
+      "name": "06 - Owner creates Data Officer in second department",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"name\":\"Postman Data Officer\",\"email\":\"{{employeeEmail}}\",\"password\":\"{{employeePassword}}\",\"role\":\"data_officer\",\"department_id\":{{secondDepartmentId}}}" },
+        "url": "{{baseUrl}}/admin/users"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Data Officer created with 201', () => pm.response.to.have.status(201));",
+        "if (pm.response.code === 201) { pm.test('Data Officer assigned to selected department', () => { pm.expect(pm.response.json().department_id).to.eql(Number(pm.collectionVariables.get('secondDepartmentId'))); pm.expect(pm.response.json().role).to.eql('data_officer'); }); } else { pm.execution.setNextRequest(null); }"
+      ] } }]
+    },
+    {
+      "name": "07 - Data Officer logs in",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"email\":\"{{employeeEmail}}\",\"password\":\"{{employeePassword}}\"}" },
+        "url": "{{baseUrl}}/auth/login"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Employee login returns 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) { pm.collectionVariables.set('employeeToken', pm.response.json().access_token); } else { pm.execution.setNextRequest(null); }"
+      ] } }]
+    },
+    {
+      "name": "08 - Data Officer profile shows assigned department",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{employeeToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/users/me"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Profile returns 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) { pm.test('Employee belongs to second department', () => pm.expect(pm.response.json().department_id).to.eql(Number(pm.collectionVariables.get('secondDepartmentId')))); }"
+      ] } }]
+    },
+    {
+      "name": "09 - Owner lists users in selected department",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/admin/users?department_id={{secondDepartmentId}}"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Users list returns 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) { pm.test('Created employee appears', () => pm.expect(pm.response.json().some(user => user.email === pm.collectionVariables.get('employeeEmail'))).to.be.true); }"
+      ] } }]
+    },
+    {
+      "name": "10 - Data Officer cannot create another account",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{employeeToken}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"name\":\"Denied\",\"email\":\"denied@example.com\",\"password\":\"test-password\",\"role\":\"data_officer\"}" },
+        "url": "{{baseUrl}}/admin/users"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Non-admin cannot add users (403)', () => pm.response.to.have.status(403));"] } }]
+    },
+    {
+      "name": "11 - Owner buys credits for second department",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"plan\":\"starter\",\"department_id\":{{secondDepartmentId}}}" },
+        "url": "{{baseUrl}}/admin/credits/purchases"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Credits purchased with 201', () => pm.response.to.have.status(201));",
+        "if (pm.response.code === 201) { pm.test('100 credits added to selected department', () => { const purchase = pm.response.json(); pm.expect(purchase.amount).to.eql(100); pm.expect(purchase.department_id).to.eql(Number(pm.collectionVariables.get('secondDepartmentId'))); }); pm.collectionVariables.set('purchasedBalance', pm.response.json().balance_after); } else { pm.execution.setNextRequest(null); }"
+      ] } }]
+    },
+    {
+      "name": "12 - Employee sees department credit balance",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{employeeToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/credits/balance"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Balance returns 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) { pm.test('Employee sees purchased balance', () => pm.expect(pm.response.json().balance).to.eql(Number(pm.collectionVariables.get('purchasedBalance')))); }"
+      ] } }]
+    },
+    {
+      "name": "13 - Employee spends 5 credits",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{employeeToken}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"credits\":5}" },
+        "url": "{{baseUrl}}/credits/spend"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Spend returns 201', () => pm.response.to.have.status(201));",
+        "if (pm.response.code === 201) { pm.test('Five credits deducted', () => pm.expect(pm.response.json().balance_after).to.eql(Number(pm.collectionVariables.get('purchasedBalance')) - 5)); }"
+      ] } }]
+    },
+    {
+      "name": "14 - Owner sees selected department balance",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/credits/balance?department_id={{secondDepartmentId}}"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Balance returns 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) { pm.test('Owner sees remaining 95 credits', () => pm.expect(pm.response.json().balance).to.eql(95)); }"
+      ] } }]
+    },
+    {
+      "name": "15 - Owner sees selected department transactions",
+      "request": {
+        "method": "GET",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/admin/credits/transactions?department_id={{secondDepartmentId}}"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('History returns 200', () => pm.response.to.have.status(200));",
+        "if (pm.response.code === 200) { pm.test('Purchase and spending recorded', () => { const transactions = pm.response.json(); pm.expect(transactions.length).to.eql(2); pm.expect(transactions.some(tx => tx.kind === 'purchase')).to.be.true; pm.expect(transactions.some(tx => tx.kind === 'spend')).to.be.true; }); }"
+      ] } }]
+    },
+    {
+      "name": "15b - Owner shares 10 credits with first department",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\"from_department_id\":{{secondDepartmentId}},\"to_department_id\":{{firstDepartmentId}},\"credits\":10}" },
+        "url": "{{baseUrl}}/admin/credits/transfers"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
+        "pm.test('Transfer succeeds with 201', () => pm.response.to.have.status(201));",
+        "if (pm.response.code === 201) { pm.test('Both departments have ledger entries', () => { const entries = pm.response.json(); pm.expect(entries.map(tx => tx.kind)).to.eql(['transfer_out', 'transfer_in']); pm.expect(entries[0].balance_after).to.eql(85); pm.expect(entries[1].balance_after).to.eql(10); }); }"
+      ] } }]
+    },
+    {
+      "name": "16 - Employee logout",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{employeeToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/auth/logout"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Logout returns 204', () => pm.response.to.have.status(204));", "pm.collectionVariables.unset('employeeToken');"] } }]
+    },
+    {
+      "name": "17 - Owner logout",
+      "request": {
+        "method": "POST",
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
+        "url": "{{baseUrl}}/auth/logout"
+      },
+      "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Logout returns 204', () => pm.response.to.have.status(204));", "pm.collectionVariables.unset('ownerToken');"] } }]
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8000" },
+    { "key": "ownerPassword", "value": "postman-owner-password-123" },
+    { "key": "employeePassword", "value": "postman-employee-password-123" },
+    { "key": "ownerEmail", "value": "" },
+    { "key": "employeeEmail", "value": "" },
+    { "key": "firstDepartmentName", "value": "" },
+    { "key": "secondDepartmentName", "value": "" },
+    { "key": "firstDepartmentId", "value": "" },
+    { "key": "secondDepartmentId", "value": "" },
+    { "key": "ownerToken", "value": "" },
+    { "key": "employeeToken", "value": "" },
+    { "key": "purchasedBalance", "value": "" }
+  ]
+}
