@@ -1,7 +1,15 @@
-"""Department credit catalog, purchases, balance, spending, and audit history."""
+"""Department credit catalog, Razorpay purchases, spending, and audit history."""
 
-from datetime import datetime
+import base64
+import hashlib
+import hmac
+import json
+import os
+from datetime import datetime, timezone
 from typing import Literal
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -10,11 +18,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.auth import accessible_department, get_current_session, require_admin
-from app.database import CreditAccount, CreditTransaction, Department, User, UserSession, get_db
+from app.database import CreditAccount, CreditPurchase, CreditTransaction, Department, User, UserSession, get_db
 
 router = APIRouter(tags=["credits"])
 
-# Demo prices; no external payment is charged by this API.
 PLANS = {
     "starter": {"credits": 100, "price_cents": 99900, "currency": "INR"},
     "growth": {"credits": 500, "price_cents": 399900, "currency": "INR"},
@@ -25,6 +32,21 @@ PLANS = {
 class PurchaseRequest(BaseModel):
     plan: Literal["starter", "growth", "scale"]
     department_id: int | None = Field(default=None, gt=0)
+
+
+class PurchaseVerificationRequest(BaseModel):
+    razorpay_order_id: str = Field(min_length=1, max_length=64)
+    razorpay_payment_id: str = Field(min_length=1, max_length=64)
+    razorpay_signature: str = Field(min_length=1, max_length=256)
+
+
+class PurchaseOrderResponse(BaseModel):
+    key_id: str
+    order_id: str
+    amount: int
+    currency: str
+    plan: str
+    credits: int
 
 
 class SpendRequest(BaseModel):
@@ -67,6 +89,39 @@ def locked_account(db: Session, department_id: int) -> CreditAccount:
     return account
 
 
+def razorpay_credentials() -> tuple[str, str]:
+    key_id = os.getenv("RAZORPAY_KEY_ID") or os.getenv("Test_API_Key") or os.getenv("Test_API_key")
+    key_secret = os.getenv("RAZORPAY_KEY_SECRET") or os.getenv("Test_Key_Secret")
+    if not key_id or not key_secret:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Razorpay is not configured")
+    return key_id, key_secret
+
+
+def razorpay_request(method: str, path: str, payload: dict | None = None) -> dict:
+    key_id, key_secret = razorpay_credentials()
+    authorization = base64.b64encode(f"{key_id}:{key_secret}".encode()).decode()
+    body = json.dumps(payload).encode() if payload is not None else None
+    request = Request(
+        f"https://api.razorpay.com/v1/{path}",
+        data=body,
+        method=method,
+        headers={"Authorization": f"Basic {authorization}", "Content-Type": "application/json"},
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            return json.loads(response.read())
+    except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=502, detail="Razorpay could not process the payment request") from exc
+
+
+def create_razorpay_order(payload: dict) -> dict:
+    return razorpay_request("POST", "orders", payload)
+
+
+def fetch_razorpay_payment(payment_id: str) -> dict:
+    return razorpay_request("GET", f"payments/{quote(payment_id, safe='')}")
+
+
 @router.get("/credits/plans")
 def list_plans() -> dict[str, dict[str, int | str]]:
     return PLANS
@@ -93,33 +148,117 @@ def credit_balance(
     return BalanceResponse(department_id=department.id, department_name=department.name, balance=account.balance)
 
 
-@router.post("/admin/credits/purchases", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
-def purchase_credits(
+@router.post("/admin/credits/purchases", response_model=PurchaseOrderResponse, status_code=status.HTTP_201_CREATED)
+def create_purchase_order(
     payload: PurchaseRequest,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin),
-) -> CreditTransaction:
+) -> PurchaseOrderResponse:
     plan = PLANS[payload.plan]
     target = payload.department_id or admin.department_id
     if target is None:
         raise HTTPException(status_code=400, detail="Create a department before purchasing credits")
     accessible_department(db, admin, target)
-    account = locked_account(db, target)
-    account.balance += plan["credits"]
-    purchase = CreditTransaction(
+    key_id, _ = razorpay_credentials()
+    purchase_id = UUID(bytes=os.urandom(16))
+    order = create_razorpay_order({
+        "amount": plan["price_cents"],
+        "currency": plan["currency"],
+        "receipt": purchase_id.hex,
+        "notes": {"plan": payload.plan, "department_id": str(target)},
+        "payment_capture": 1,
+    })
+    order_id = order.get("id")
+    if not isinstance(order_id, str) or not order_id:
+        raise HTTPException(status_code=502, detail="Razorpay returned an invalid order")
+    purchase = CreditPurchase(
+        id=purchase_id,
+        razorpay_order_id=order_id,
         department_id=target,
         actor_id=admin.user_id,
-        kind="purchase",
-        amount=plan["credits"],
-        balance_after=account.balance,
         plan=payload.plan,
-        price_cents=plan["price_cents"],
+        credits=plan["credits"],
+        amount=plan["price_cents"],
         currency=plan["currency"],
     )
     db.add(purchase)
     db.commit()
-    db.refresh(purchase)
-    return purchase
+    return PurchaseOrderResponse(
+        key_id=key_id,
+        order_id=order_id,
+        amount=purchase.amount,
+        currency=purchase.currency,
+        plan=purchase.plan,
+        credits=purchase.credits,
+    )
+
+
+@router.post("/admin/credits/purchases/verify", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
+def verify_purchase(
+    payload: PurchaseVerificationRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> CreditTransaction:
+    purchase = db.scalar(select(CreditPurchase).where(
+        CreditPurchase.razorpay_order_id == payload.razorpay_order_id
+    ))
+    if purchase is None or purchase.actor_id != admin.user_id:
+        raise HTTPException(status_code=404, detail="Payment order not found")
+    accessible_department(db, admin, purchase.department_id)
+    _, key_secret = razorpay_credentials()
+    expected = hmac.new(
+        key_secret.encode(),
+        f"{payload.razorpay_order_id}|{payload.razorpay_payment_id}".encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    if not hmac.compare_digest(expected, payload.razorpay_signature):
+        raise HTTPException(status_code=400, detail="Payment signature is invalid")
+
+    payment = fetch_razorpay_payment(payload.razorpay_payment_id)
+    if (
+        payment.get("id") != payload.razorpay_payment_id
+        or payment.get("order_id") != purchase.razorpay_order_id
+        or payment.get("amount") != purchase.amount
+        or payment.get("currency") != purchase.currency
+        or payment.get("status") != "captured"
+    ):
+        raise HTTPException(status_code=409, detail="Payment has not been captured for this order")
+
+    purchase = db.scalar(
+        select(CreditPurchase).where(CreditPurchase.id == purchase.id).with_for_update()
+    )
+    if purchase.status == "paid" and purchase.transaction_id is not None:
+        transaction = db.get(CreditTransaction, purchase.transaction_id)
+        if transaction is not None:
+            return transaction
+    existing_payment = db.scalar(select(CreditPurchase.id).where(
+        CreditPurchase.razorpay_payment_id == payload.razorpay_payment_id,
+        CreditPurchase.id != purchase.id,
+    ))
+    if existing_payment is not None:
+        raise HTTPException(status_code=409, detail="Payment has already been applied")
+
+    account = locked_account(db, purchase.department_id)
+    account.balance += purchase.credits
+    transaction = CreditTransaction(
+        department_id=purchase.department_id,
+        actor_id=admin.user_id,
+        kind="purchase",
+        amount=purchase.credits,
+        balance_after=account.balance,
+        plan=purchase.plan,
+        price_cents=purchase.amount,
+        currency=purchase.currency,
+    )
+    db.add(transaction)
+    db.flush()
+    purchase.razorpay_payment_id = payload.razorpay_payment_id
+    purchase.transaction_id = transaction.id
+    purchase.status = "paid"
+    purchase.paid_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(transaction)
+    return transaction
 
 
 @router.post("/credits/spend", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)

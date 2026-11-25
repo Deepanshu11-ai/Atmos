@@ -1,6 +1,9 @@
 """Backend product flows using a temporary in-memory database."""
 
+import hashlib
+import hmac
 import unittest
+from unittest.mock import patch
 from uuid import UUID
 
 from fastapi.testclient import TestClient
@@ -15,6 +18,15 @@ from app.migrations import initialize_database
 
 class ProductWorkflowTest(unittest.TestCase):
     def setUp(self):
+        self.razorpay_secret = "test_secret"
+        self.razorpay_orders = {}
+        self.environment = patch.dict("os.environ", {
+            "RAZORPAY_KEY_ID": "rzp_test_key",
+            "RAZORPAY_KEY_SECRET": self.razorpay_secret,
+        })
+        self.environment.start()
+        self.create_order_mock = patch("app.credits.create_razorpay_order", side_effect=self.create_order).start()
+        self.fetch_payment_mock = patch("app.credits.fetch_razorpay_payment", side_effect=self.fetch_payment).start()
         self.engine = create_engine(
             "sqlite+pysqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool
         )
@@ -33,6 +45,46 @@ class ProductWorkflowTest(unittest.TestCase):
         self.client.close()
         app.dependency_overrides.clear()
         self.engine.dispose()
+        patch.stopall()
+
+    def create_order(self, payload):
+        order_id = f"order_test_{len(self.razorpay_orders) + 1}"
+        self.razorpay_orders[order_id] = payload
+        return {"id": order_id}
+
+    def fetch_payment(self, payment_id):
+        order_id = payment_id.removeprefix("pay_")
+        order = self.razorpay_orders[order_id]
+        return {
+            "id": payment_id, "order_id": order_id, "amount": order["amount"],
+            "currency": order["currency"], "status": "captured",
+        }
+
+    def purchase(self, headers, plan, department_id):
+        order = self.client.post("/admin/credits/purchases", headers=headers, json={
+            "plan": plan, "department_id": department_id,
+        })
+        self.assertEqual(order.status_code, 201, order.text)
+        order_id = order.json()["order_id"]
+        payment_id = f"pay_{order_id}"
+        signature = hmac.new(
+            self.razorpay_secret.encode(), f"{order_id}|{payment_id}".encode(), hashlib.sha256
+        ).hexdigest()
+        verification = {
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": signature,
+        }
+        invalid = self.client.post(
+            "/admin/credits/purchases/verify", headers=headers,
+            json={**verification, "razorpay_signature": "invalid"},
+        )
+        self.assertEqual(invalid.status_code, 400, invalid.text)
+        response = self.client.post("/admin/credits/purchases/verify", headers=headers, json=verification)
+        retry = self.client.post("/admin/credits/purchases/verify", headers=headers, json=verification)
+        self.assertEqual(retry.status_code, 201, retry.text)
+        self.assertEqual(retry.json()["id"], response.json()["id"])
+        return response
 
     def owner(self, email):
         response = self.client.post("/auth/register", json={
@@ -96,9 +148,7 @@ class ProductWorkflowTest(unittest.TestCase):
 
         plans = self.client.get("/credits/plans").json()
         self.assertEqual(plans["starter"]["currency"], "INR")
-        purchase = self.client.post("/admin/credits/purchases", headers=alice, json={
-            "plan": "starter", "department_id": alice_sales,
-        })
+        purchase = self.purchase(alice, "starter", alice_sales)
         self.assertEqual(purchase.status_code, 201, purchase.text)
         self.assertEqual(purchase.json()["price_cents"], 99900)
         self.assertEqual(purchase.json()["currency"], "INR")
@@ -181,9 +231,7 @@ class ProductWorkflowTest(unittest.TestCase):
         self.assertEqual(dashboard.json()["total_co2e_kg"], 1550)
         self.assertEqual(dashboard.json()["pending_credit_applications"], 1)
         self.assertEqual(dashboard.json()["monthly"][0]["period"], "2026-09")
-        purchase = self.client.post("/admin/credits/purchases", headers=admin, json={
-            "plan": "starter", "department_id": department_id,
-        })
+        purchase = self.purchase(admin, "starter", department_id)
         self.assertEqual(purchase.status_code, 201, purchase.text)
         reconciled = self.client.post("/emissions/analyze", headers=staff_headers["compliance_manager"])
         self.assertEqual(reconciled.status_code, 200, reconciled.text)

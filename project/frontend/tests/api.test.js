@@ -49,7 +49,7 @@ test('rejects external URLs and traversal before sending credentials', async () 
 });
 
 test('redacts secrets recursively without mutating input', () => {
-  const input = { users: [{ name: 'Owner', password: 'secret' }], authorization: 'Bearer secret' };
-  assert.deepEqual(redact(input), { users: [{ name: 'Owner', password: '[redacted]' }], authorization: '[redacted]' });
+  const input = { users: [{ name: 'Owner', password: 'secret' }], authorization: 'Bearer secret', razorpay_signature: 'signed' };
+  assert.deepEqual(redact(input), { users: [{ name: 'Owner', password: '[redacted]' }], authorization: '[redacted]', razorpay_signature: '[redacted]' });
   assert.equal(input.users[0].password, 'secret');
 });

@@ -86,6 +86,28 @@ class CreditTransaction(Base):
     )
 
 
+class CreditPurchase(Base):
+    __tablename__ = "credit_purchases"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    razorpay_order_id: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    razorpay_payment_id: Mapped[str | None] = mapped_column(String(64), unique=True)
+    transaction_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("credit_transactions.id"), unique=True
+    )
+    department_id: Mapped[int] = mapped_column(ForeignKey("departments.id"), index=True, nullable=False)
+    actor_id: Mapped[int] = mapped_column(ForeignKey("users.user_id"), nullable=False)
+    plan: Mapped[str] = mapped_column(String(30), nullable=False)
+    credits: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False)
+    currency: Mapped[str] = mapped_column(String(3), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="created", server_default="created")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now()
+    )
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Bill(Base):
     __tablename__ = "bills"
 

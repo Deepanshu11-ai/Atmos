@@ -26,12 +26,22 @@ The department IDs in these examples are illustrative. Owners can assign users t
 | --- | --- | --- | --- |
 | GET | `/credits/plans` | Public | View available packs |
 | GET | `/credits/balance` | Logged-in user | View own department balance; a managing admin can use `?department_id=2` |
-| POST | `/admin/credits/purchases` | Admin | Record a pack purchase: `{"plan":"starter","department_id":2}`; omit department ID for own department |
+| POST | `/admin/credits/purchases` | Admin | Create a Razorpay order for a pack: `{"plan":"starter","department_id":2}`; omit department ID for own department |
+| POST | `/admin/credits/purchases/verify` | Admin | Verify Razorpay's checkout response and add the paid credits exactly once |
 | POST | `/admin/credits/transfers` | Admin managing both departments | Move credits between teams: `{"from_department_id":1,"to_department_id":2,"credits":25}` |
 | POST | `/credits/spend` | Logged-in user | Spend from own department with `{"credits":5}`; insufficient balance returns 409 |
 | GET | `/admin/credits/transactions` | Admin | View department ledger; optionally specify an owned `?department_id=2` |
 
-Plans defined in `app/credits.py` are **starter** (100 credits, ₹999), **growth** (500 credits, ₹3,999) and **scale** (2,000 credits, ₹12,999). Prices are examples, denominated in INR (the API stores the smallest currency unit in `price_cents`). Purchases record credits but do **not** charge a real payment method. Credits are shared by users in the chosen department and do not expire. Transfers deduct and add credits atomically, with a ledger entry in each department.
+Plans defined in `app/credits.py` are **starter** (100 credits, ₹999), **growth** (500 credits, ₹3,999) and **scale** (2,000 credits, ₹12,999). Prices are denominated in INR and stored in the smallest currency unit. The backend creates the order at the catalog price, verifies Razorpay's HMAC signature and captured payment details, and applies each payment once. Credits are shared by users in the chosen department and do not expire. Transfers deduct and add credits atomically, with a ledger entry in each department.
+
+Configure Razorpay test credentials in the backend `.env`; the secret is never sent to the browser:
+
+```dotenv
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
+```
+
+The existing `Test_API_Key` and `Test_Key_Secret` names are also supported.
 
 `GET /users/me` shows your role and department. `POST /auth/logout` revokes your current token. Only public signup creates a new owner with the `admin` role; existing department admins remain active.
 

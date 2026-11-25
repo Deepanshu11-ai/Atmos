@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Signup, Departments and Credits - Complete Workflow",
-    "description": "Run requests in order. The collection signs up an owner, creates their first department and a second department, adds a user, buys credits and tests permissions. No pre-existing admin is needed; purchases do not charge a payment method.",
+    "description": "Run requests in order. The collection signs up an owner, creates departments, adds a user, and creates a Razorpay test order. Complete and verify payment through the web checkout before testing balance or spend requests.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -152,7 +152,7 @@
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Non-admin cannot add users (403)', () => pm.response.to.have.status(403));"] } }]
     },
     {
-      "name": "11 - Owner buys credits for second department",
+      "name": "11 - Owner creates Razorpay order for credits",
       "request": {
         "method": "POST",
         "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{ownerToken}}", "type": "string" }] },
@@ -161,8 +161,8 @@
         "url": "{{baseUrl}}/admin/credits/purchases"
       },
       "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": [
-        "pm.test('Credits purchased with 201', () => pm.response.to.have.status(201));",
-        "if (pm.response.code === 201) { pm.test('100 credits added to selected department', () => { const purchase = pm.response.json(); pm.expect(purchase.amount).to.eql(100); pm.expect(purchase.department_id).to.eql(Number(pm.collectionVariables.get('secondDepartmentId'))); }); pm.collectionVariables.set('purchasedBalance', pm.response.json().balance_after); } else { pm.execution.setNextRequest(null); }"
+        "pm.test('Razorpay order created with 201', () => pm.response.to.have.status(201));",
+        "if (pm.response.code === 201) { pm.test('Server-priced order returned', () => { const order = pm.response.json(); pm.expect(order.amount).to.eql(99900); pm.expect(order.currency).to.eql('INR'); pm.expect(order.order_id).to.be.a('string'); }); } pm.execution.setNextRequest(null);"
       ] } }]
     },
     {
