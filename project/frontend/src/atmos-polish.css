@@ -1,0 +1,835 @@
+/* =========================================================
+   ATMOS — VISUAL POLISH
+   Calm climate-tech design system
+   ========================================================= */
+
+:root {
+  --atmos-forest: #174b3a;
+  --atmos-forest-dark: #123d30;
+  --atmos-forest-light: #275d48;
+
+  --atmos-paper: #f7f9f5;
+  --atmos-white: #ffffff;
+
+  --atmos-soft: #eaf2e8;
+  --atmos-mint: #d5e8d0;
+  --atmos-muted: #799181;
+
+  --atmos-text: #173a2e;
+  --atmos-body: #66776c;
+  --atmos-border: #e0e8df;
+
+  --atmos-radius: 22px;
+}
+
+/* ---------- GLOBAL ---------- */
+
+body {
+  background: var(--atmos-paper);
+}
+
+.carbon-marketing {
+  background: var(--atmos-paper) !important;
+  color: var(--atmos-text);
+}
+
+.carbon-marketing button,
+.carbon-marketing a {
+  transition:
+    transform .25s ease,
+    background-color .25s ease,
+    border-color .25s ease,
+    color .25s ease;
+}
+
+.carbon-marketing button:hover {
+  transform: translateY(-2px);
+}
+
+.carbon-marketing a:hover {
+  opacity: .86;
+}
+
+.carbon-marketing ::selection {
+  background: #cfe3cc;
+  color: var(--atmos-forest-dark);
+}
+
+/* ---------- HEADER ---------- */
+
+.marketing-header {
+  background: rgba(247, 249, 245, .88) !important;
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(23, 75, 58, .09) !important;
+}
+
+.header-inner {
+  min-height: 82px;
+}
+
+.marketing-links a {
+  color: var(--atmos-text);
+}
+
+.marketing-actions .plain-link {
+  color: var(--atmos-forest);
+}
+
+/* ---------- HERO ---------- */
+
+.carbon-hero {
+  padding-top: 105px !important;
+  padding-bottom: 90px !important;
+  min-height: 750px;
+}
+
+.carbon-hero-copy {
+  max-width: 690px;
+}
+
+.carbon-kicker {
+  color: #628570 !important;
+  letter-spacing: 2px;
+  font-size: 11px !important;
+  font-weight: 700;
+}
+
+.carbon-hero h1 {
+  font-size: clamp(58px, 6.3vw, 94px) !important;
+  line-height: .98 !important;
+  letter-spacing: -5px !important;
+  color: var(--atmos-forest-dark) !important;
+  margin-top: 28px;
+}
+
+.carbon-hero h1 em {
+  color: #6d9679 !important;
+  font-weight: 400;
+}
+
+.carbon-hero-copy > p {
+  max-width: 610px;
+  font-size: 17px !important;
+  line-height: 1.85 !important;
+  color: var(--atmos-body) !important;
+  margin-top: 32px;
+}
+
+.carbon-hero .hero-actions {
+  margin-top: 35px;
+  gap: 26px;
+}
+
+.carbon-hero .pill-button.dark {
+  background: var(--atmos-forest) !important;
+  color: white !important;
+  box-shadow: 0 12px 28px rgba(23, 75, 58, .12);
+}
+
+.carbon-hero .pill-button.dark:hover {
+  background: var(--atmos-forest-light) !important;
+}
+
+.carbon-text-link {
+  color: var(--atmos-forest) !important;
+  border-color: #a9b9ad !important;
+}
+
+.carbon-proof {
+  margin-top: 48px !important;
+  border-top: 1px solid var(--atmos-border);
+  padding-top: 22px;
+}
+
+.carbon-proof p {
+  color: var(--atmos-muted);
+}
+
+/* ---------- GLOBE ---------- */
+
+.carbon-hero-visual {
+  min-width: 0;
+}
+
+.globe-stage {
+  filter: saturate(.92);
+}
+
+.carbon-globe {
+  box-shadow:
+    inset -34px -28px 70px rgba(9, 45, 35, .22),
+    inset 22px 20px 45px rgba(212, 241, 206, .28),
+    0 40px 85px rgba(28, 86, 58, .12) !important;
+}
+
+.globe-orbit {
+  border-color: rgba(110, 164, 125, .36) !important;
+}
+
+.co2-bubble {
+  background: rgba(255, 255, 255, .95) !important;
+  border: 1px solid #dce8d8 !important;
+  box-shadow: 0 20px 50px rgba(25, 75, 52, .08) !important;
+}
+
+.carbon-score {
+  background: var(--atmos-forest) !important;
+  border: 1px solid rgba(255, 255, 255, .12) !important;
+}
+
+.source-chip {
+  background: white !important;
+  border: 1px solid #e3eae1 !important;
+}
+
+/* ---------- WORKFLOW BAND ---------- */
+
+.carbon-metrics {
+  background: #edf4eb !important;
+  border-top: 1px solid #e4ece2;
+  border-bottom: 1px solid #e4ece2;
+}
+
+.carbon-metrics .site-container {
+  min-height: 100px;
+}
+
+.carbon-metrics strong {
+  color: var(--atmos-forest) !important;
+}
+
+.carbon-metrics span {
+  color: #82988a !important;
+}
+
+/* ---------- WORKFLOW SECTION ---------- */
+
+.carbon-workflow {
+  padding-top: 145px !important;
+  padding-bottom: 140px !important;
+}
+
+.carbon-section-head {
+  margin-bottom: 90px !important;
+}
+
+.carbon-section-head h2 {
+  font-size: clamp(52px, 5.5vw, 78px) !important;
+  line-height: 1.03 !important;
+  letter-spacing: -4px !important;
+  color: var(--atmos-forest-dark) !important;
+}
+
+.carbon-section-head h2 em {
+  color: #729575 !important;
+}
+
+.carbon-section-head > p {
+  color: var(--atmos-body) !important;
+  font-size: 16px !important;
+  line-height: 1.8 !important;
+  max-width: 490px;
+}
+
+/* Workflow card layout */
+
+.workflow-grid {
+  border-top: 1px solid #dce6dc;
+  border-bottom: 1px solid #dce6dc;
+}
+
+.workflow-grid article {
+  position: relative;
+  padding: 42px 38px 48px !important;
+  min-height: 390px !important;
+  background: transparent !important;
+  border-right: 1px solid #dce6dc !important;
+  transition:
+    background .4s ease,
+    transform .4s ease,
+    box-shadow .4s ease !important;
+}
+
+.workflow-grid article:last-child {
+  border-right: none !important;
+}
+
+.workflow-grid article:hover {
+  background: rgba(233, 242, 231, .5) !important;
+  transform: translateY(-5px) !important;
+}
+
+.workflow-grid article > span:first-child {
+  color: #76917d !important;
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-size: 16px !important;
+}
+
+/* Better icon containers */
+
+.workflow-icon {
+  width: 90px !important;
+  height: 90px !important;
+  border-radius: 26px !important;
+  margin-top: 75px !important;
+  margin-bottom: 30px !important;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    linear-gradient(145deg, #f7fbf5, #e5efe3) !important;
+
+  border: 1px solid #d6e5d4 !important;
+
+  color: var(--atmos-forest) !important;
+
+  box-shadow:
+    0 14px 30px rgba(28, 72, 49, .07),
+    inset 0 1px 0 white;
+
+  transition:
+    transform .35s ease,
+    box-shadow .35s ease;
+}
+
+.workflow-grid article:hover .workflow-icon {
+  transform: translateY(-4px) rotate(-3deg);
+  box-shadow: 0 20px 38px rgba(28, 72, 49, .12);
+}
+
+.workflow-icon svg {
+  width: 30px;
+  height: 30px;
+  stroke-width: 1.65;
+}
+
+.workflow-grid h3 {
+  color: var(--atmos-forest-dark) !important;
+  font-size: 23px !important;
+  font-weight: 600 !important;
+  letter-spacing: -.6px;
+  margin-bottom: 15px !important;
+}
+
+.workflow-grid p {
+  color: var(--atmos-body) !important;
+  font-size: 14px !important;
+  line-height: 1.85 !important;
+  max-width: 320px;
+}
+
+/* ---------- MANIFESTO ---------- */
+
+.carbon-manifesto {
+  background: var(--atmos-forest-dark) !important;
+  color: white;
+  padding-top: 125px !important;
+  padding-bottom: 125px !important;
+}
+
+.carbon-manifesto h2 {
+  font-size: clamp(48px, 5.5vw, 76px) !important;
+  line-height: 1.05 !important;
+  letter-spacing: -4px !important;
+  color: #f6faf5 !important;
+}
+
+.carbon-manifesto h2 em {
+  color: #b8d8ad !important;
+}
+
+.manifesto-points p {
+  border-top: 1px solid rgba(255, 255, 255, .17) !important;
+  padding: 28px 0 !important;
+}
+
+.manifesto-points p strong {
+  color: #f5faf5 !important;
+}
+
+.manifesto-points p span {
+  color: #c1d2c7 !important;
+  line-height: 1.7;
+}
+
+.manifesto-points p b {
+  color: #b9dfad !important;
+}
+
+/* ---------- CREDITS ---------- */
+
+.carbon-credits-section {
+  padding-top: 125px !important;
+  padding-bottom: 125px !important;
+}
+
+.carbon-credits-section h2 {
+  color: var(--atmos-forest-dark) !important;
+  font-size: clamp(48px, 5.4vw, 76px) !important;
+  line-height: 1.03 !important;
+  letter-spacing: -4px !important;
+}
+
+.carbon-credits-section h2 em {
+  color: #739476 !important;
+}
+
+.credit-callout {
+  border-left: 1px solid #d5e3d4 !important;
+}
+
+.credit-callout p {
+  color: var(--atmos-body) !important;
+  line-height: 1.9;
+}
+
+.credit-ring {
+  border: 1px solid #a9c3a7 !important;
+  background: #eaf3e8 !important;
+  color: var(--atmos-forest) !important;
+}
+
+/* ---------- FOOTER ---------- */
+
+.carbon-footer {
+  border-top: 1px solid var(--atmos-border);
+  padding-top: 30px !important;
+  padding-bottom: 30px !important;
+}
+
+.carbon-footer p,
+.carbon-footer span {
+  color: var(--atmos-muted) !important;
+}
+
+/* ---------- LOGIN / REGISTER ---------- */
+
+.auth-layout {
+  background: #fff !important;
+}
+
+/* Left panel */
+
+.auth-side {
+  background:
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(115, 153, 126, .16),
+      transparent 32%
+    ),
+    linear-gradient(
+      155deg,
+      #174b3a 0%,
+      #143f32 60%,
+      #10382d 100%
+    ) !important;
+
+  color: #f6faf5 !important;
+}
+
+.auth-side .logo,
+.auth-side a {
+  color: #f6faf5 !important;
+}
+
+.auth-side-center {
+  max-width: 600px;
+}
+
+.auth-side-center .eyebrow-line {
+  color: #b5d0b7 !important;
+}
+
+.auth-side-center h2 {
+  color: #f6faf5 !important;
+  font-size: clamp(46px, 5vw, 72px) !important;
+  line-height: 1.08 !important;
+  letter-spacing: -3px !important;
+}
+
+.auth-side-center h2 em {
+  color: #c7dfc2 !important;
+  font-weight: 400;
+}
+
+.auth-side-center p {
+  color: #c1d5c8 !important;
+  font-size: 16px !important;
+  line-height: 1.8;
+}
+
+.auth-side-footer {
+  color: #9fbea9 !important;
+}
+
+/* Auth art */
+
+.auth-art {
+  position: relative;
+  opacity: .92;
+}
+
+.auth-art-ring {
+  background: radial-gradient(
+    circle,
+    #dcebd5 0%,
+    #c4dfb9 48%,
+    #a7c9a4 100%
+  ) !important;
+
+  border-color: rgba(255, 255, 255, .2) !important;
+
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .13);
+}
+
+.auth-art-star {
+  color: #5d896b !important;
+}
+
+.auth-art-small {
+  color: #c4dfb9 !important;
+}
+
+/* Right panel */
+
+.auth-main {
+  background: #fcfdfb !important;
+}
+
+.auth-top {
+  color: #76877a !important;
+}
+
+.auth-top .text-action {
+  color: #5d7465 !important;
+}
+
+.auth-top .text-action.emphasized {
+  color: var(--atmos-forest) !important;
+  font-weight: 600;
+}
+
+.auth-form-container {
+  max-width: 470px !important;
+}
+
+.auth-form-container .eyebrow-line {
+  color: #72917c !important;
+}
+
+.auth-form-container h1 {
+  color: var(--atmos-forest-dark) !important;
+  font-size: 43px !important;
+  letter-spacing: -2px !important;
+  line-height: 1.13 !important;
+}
+
+.auth-form-container > p {
+  color: #78877c !important;
+  line-height: 1.8 !important;
+}
+
+/* Form labels */
+
+.auth-main label,
+.auth-main .field {
+  color: #294d3b !important;
+  font-weight: 500;
+}
+
+/* Inputs */
+
+.auth-main input,
+.auth-main select,
+.auth-main textarea {
+  background: #ffffff !important;
+  color: #234535 !important;
+
+  border: 1px solid #dce5dc !important;
+  border-radius: 13px !important;
+
+  padding: 16px 17px !important;
+  min-height: 54px;
+
+  box-shadow: none !important;
+  outline: none !important;
+
+  transition:
+    border-color .2s ease,
+    box-shadow .2s ease,
+    background .2s ease;
+}
+
+.auth-main input::placeholder {
+  color: #a0ada3 !important;
+}
+
+.auth-main input:focus,
+.auth-main select:focus,
+.auth-main textarea:focus {
+  border-color: #79a185 !important;
+  background: #fff !important;
+
+  box-shadow:
+    0 0 0 4px rgba(113, 154, 124, .12) !important;
+}
+
+/* Login button */
+
+.auth-main .pill-button.dark {
+  background: var(--atmos-forest) !important;
+  color: white !important;
+
+  min-height: 58px;
+  border-radius: 16px !important;
+
+  box-shadow: 0 12px 28px rgba(23, 75, 58, .12);
+}
+
+.auth-main .pill-button.dark:hover {
+  background: #255c45 !important;
+}
+
+/* Auth footnote */
+
+.auth-footnote {
+  color: #8a9b8e !important;
+}
+
+.auth-footnote svg {
+  color: #7da484 !important;
+}
+
+/* ---------- REVEAL ANIMATION ---------- */
+
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+
+  transition:
+    opacity .7s ease,
+    transform .7s cubic-bezier(.2, .65, .25, 1);
+}
+
+.scroll-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.workflow-grid article.scroll-reveal {
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+/* ---------- RESPONSIVE ---------- */
+
+@media (max-width: 900px) {
+  .carbon-hero h1 {
+    letter-spacing: -3px !important;
+  }
+
+  .carbon-workflow {
+    padding-top: 95px !important;
+    padding-bottom: 95px !important;
+  }
+
+  .workflow-grid article {
+    padding: 30px 22px !important;
+  }
+
+  .workflow-icon {
+    margin-top: 40px !important;
+  }
+
+  .auth-form-container h1 {
+    font-size: 36px !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .carbon-hero {
+    padding-top: 60px !important;
+    padding-bottom: 60px !important;
+  }
+
+  .carbon-hero h1 {
+    letter-spacing: -3px !important;
+  }
+
+  .carbon-section-head {
+    margin-bottom: 45px !important;
+  }
+
+  .carbon-section-head h2 {
+    letter-spacing: -2.5px !important;
+  }
+
+  .workflow-grid article {
+    padding: 28px 0 !important;
+    min-height: 0 !important;
+  }
+
+  .workflow-icon {
+    margin-top: 35px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .auth-layout {
+    min-height: 100vh;
+  }
+
+  .auth-main {
+    padding: 25px !important;
+  }
+}
+
+/* Accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  * {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+/* =========================================================
+   NEW WORKFLOW CARD DESIGN
+   ========================================================= */
+
+.workflow-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.workflow-card::after {
+  content: "";
+  position: absolute;
+
+  width: 180px;
+  height: 180px;
+
+  right: -80px;
+  top: -80px;
+
+  border-radius: 50%;
+
+  background: radial-gradient(
+    circle,
+    rgba(211, 231, 207, .55),
+    transparent 72%
+  );
+
+  z-index: -1;
+}
+
+.workflow-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+
+  color: #809689;
+
+  margin-bottom: 12px;
+}
+
+.workflow-number {
+  display: block;
+  font-family: Georgia, serif;
+  font-style: italic;
+
+  color: #76907e;
+  font-size: 17px;
+}
+
+.workflow-icon {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.workflow-icon svg {
+  position: relative;
+  z-index: 2;
+}
+
+.icon-decoration {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.icon-decoration-one {
+  width: 30px;
+  height: 30px;
+
+  right: -6px;
+  top: -6px;
+
+  background: #d5e7d1;
+  opacity: .7;
+}
+
+.icon-decoration-two {
+  width: 12px;
+  height: 12px;
+
+  left: 8px;
+  bottom: 8px;
+
+  background: #b8d2b6;
+}
+
+.workflow-icon-evidence {
+  background: linear-gradient(135deg, #edf5ed, #dcebdc) !important;
+}
+
+.workflow-icon-measure {
+  background: linear-gradient(135deg, #f0f5ef, #d8e7d6) !important;
+}
+
+.workflow-icon-action {
+  background: linear-gradient(135deg, #e9f3e8, #cfe2cf) !important;
+}
+
+.workflow-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-top: 35px;
+  padding-top: 17px;
+
+  border-top: 1px solid #dce7dc;
+
+  color: #7b9181;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.workflow-card-bottom span:last-child {
+  color: #315c45;
+  font-size: 18px;
+}
+
+.workflow-card:hover .workflow-card-bottom span:last-child {
+  transform: translate(3px, -3px);
+}
+
+.workflow-card-bottom span:last-child {
+  transition: transform .3s ease;
+}
+
+@media (max-width: 700px) {
+  .workflow-card-bottom {
+    margin-top: 25px;
+  }
+}

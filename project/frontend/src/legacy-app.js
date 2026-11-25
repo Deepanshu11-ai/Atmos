@@ -1,4 +1,5 @@
 import './style.css';
+import './carbon-theme.css';
 import { request } from './api.js';
 
 const iconPaths = {
@@ -302,15 +303,119 @@ function departments() {
   return `${pageHead('SPACE FOR EVERY TEAM', 'Start with a department.', 'You choose when to create your first department, then assign people to it.')}<div class="management-grid"><section class="first-department"><span class="first-department-icon">${icon('layers', 32)}</span><h2>A place for your people.</h2><p>Departments have their own shared balance. Once you create one, you can add teammates and credits.</p></section><section class="surface-card form-card"><span class="overline">LET’S GET STARTED</span><h2>Create your first department</h2><p>Name the team or space you want to organize.</p><form data-form="department">${field('Department name', 'name', 'text', 'placeholder="e.g. Design team" maxlength="255"')}<button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Creating…' : 'Create department'} ${icon('arrow', 17)}</button></form></section></div>`;
 }
 
+function carbonLanding() {
+  const signedInRoute = state.profile ? 'dashboard' : 'register';
+  return `<div class="marketing carbon-marketing">${marketingHeader()}
+    <main>
+      <section class="carbon-hero site-container">
+        <div class="carbon-hero-copy">
+          <span class="carbon-kicker"><i></i> Carbon intelligence for operating teams</span>
+          <h1>Measure what<br>your business<br><em>leaves behind.</em></h1>
+          <p>Turn utility bills and operational evidence into a clear emissions picture. Track CO₂e, identify hotspots, and move from reporting to reduction.</p>
+          <div class="hero-actions">
+            <button class="pill-button dark large" data-route="${signedInRoute}">${state.profile ? 'Open carbon dashboard' : 'Start measuring'} ${icon('arrowUp', 18)}</button>
+            <a class="carbon-text-link" href="#how-it-works">Explore the workflow ${icon('arrow', 17)}</a>
+          </div>
+          <div class="carbon-proof"><span>${icon('shield', 18)}</span><p><strong>Evidence-led accounting</strong> Every estimate stays connected to its source document.</p></div>
+        </div>
+        <div class="carbon-hero-visual" aria-label="Animated carbon globe with floating emissions indicators">
+          <div class="globe-stage">
+            <div class="globe-orbit orbit-a"><span class="orbit-node"></span></div>
+            <div class="globe-orbit orbit-b"><span class="orbit-node"></span></div>
+            <div class="globe-orbit orbit-c"></div>
+            <div class="carbon-globe"><div class="globe-shine"></div><div class="globe-land land-one"></div><div class="globe-land land-two"></div><div class="globe-land land-three"></div><div class="globe-grid"></div><div class="globe-core-mark">✳</div></div>
+            <div class="co2-bubble bubble-one"><span>CO₂</span><small>Electricity</small></div>
+            <div class="co2-bubble bubble-two"><span>CO₂</span><small>Transport</small></div>
+            <div class="co2-bubble bubble-three"><span>CO₂</span><small>Operations</small></div>
+            <div class="co2-bubble bubble-four"><span>CO₂</span><small>Waste</small></div>
+            <div class="carbon-score"><span>ESTIMATED FOOTPRINT</span><strong>12.8<small>t CO₂e</small></strong><div><i></i><b>18% lower</b> than last period</div></div>
+            <div class="source-chip source-chip-one">${icon('bolt', 16)} Electricity <b>48%</b></div>
+            <div class="source-chip source-chip-two">${icon('cloud', 16)} Transport <b>27%</b></div>
+            <div class="orbit-leaf">${icon('leaf', 34)}</div>
+          </div>
+        </div>
+      </section>
+      <section class="carbon-metrics"><div class="site-container"><span>ONE AUDITABLE WORKFLOW</span><strong>Evidence</strong><i></i><strong>Measurement</strong><i></i><strong>Reduction</strong><i></i><strong>Reporting</strong></div></section>
+      <section id="how-it-works" class="carbon-workflow site-container">
+        
+<div class="carbon-section-head">
+  <span class="carbon-kicker">
+    <i></i> From raw evidence to real decisions
+  </span>
+
+  <h2>
+    Know your impact.<br>
+    <em>Change what matters.</em>
+  </h2>
+
+  <p>
+    Atmos turns everyday operational documents into a reliable carbon picture.
+    See where emissions come from, understand the numbers, and give every team
+    a clear next step.
+  </p>
+</div>
+        <div class="workflow-grid">
+          <article><span>01</span><div class="workflow-icon">${icon('upload', 25)}</div><h3>Collect evidence</h3><p>Upload electricity, fuel, travel, waste, and other operational bills into the correct department.</p></article>
+          <article><span>02</span><div class="workflow-icon">${icon('spark', 25)}</div><h3>Calculate CO₂e</h3><p>AI-assisted analysis extracts activity data and estimates emissions with visible confidence and assumptions.</p></article>
+          <article><span>03</span><div class="workflow-icon">${icon('target', 25)}</div><h3>Act on hotspots</h3><p>Compare periods, understand category shares, and focus reduction work where it has the greatest impact.</p></article>
+        </div>
+      </section>
+      <section id="why-atmos" class="carbon-manifesto"><div class="site-container manifesto-inner"><div><span class="carbon-kicker light"><i></i> Built for credible action</span><h2>Carbon reporting should create <em>momentum,</em> not paperwork.</h2></div><div class="manifesto-points"><p><b>01</b><span><strong>Traceable by design</strong>Source documents, estimates, and retired credits remain connected.</span></p><p><b>02</b><span><strong>Clear across teams</strong>Department-level access keeps data ownership simple and accountable.</span></p><p><b>03</b><span><strong>Useful beyond compliance</strong>Reduction suggestions turn reporting data into practical next steps.</span></p></div></div></section>
+      <section id="pricing" class="carbon-credits-section site-container"><div><span class="carbon-kicker"><i></i> Account for residual impact</span><h2>Measure first.<br>Reduce next.<br><em>Offset responsibly.</em></h2></div><div class="credit-callout"><div class="credit-ring">${icon('leaf', 44)}</div><p>Carbon credits are retired against analyzed emissions at one credit per tonne of CO₂e. Your ledger records every purchase, transfer, and retirement.</p><button class="pill-button dark" data-route="${signedInRoute}">${state.profile ? 'View your ledger' : 'Create your workspace'} ${icon('arrow', 17)}</button></div></section>
+    </main>
+    <footer class="carbon-footer site-container">${logo()}<p>Measure clearly. Reduce deliberately.</p><span>ATMOS · CARBON INTELLIGENCE</span></footer>
+  </div>`;
+}
+
+function carbonAuth() {
+  return authPage()
+    .replace('A LITTLE SPACE TO DO A LOT', 'A CLEARER VIEW OF YOUR IMPACT')
+    .replace('Good things<br>start <em>together.</em>', 'Climate action<br>starts with <em>clarity.</em>')
+    .replace('One place for your people and your possibilities.', 'One evidence-led workspace for your carbon data, teams, and targets.')
+    .replace('ATMOS · MADE FOR MOMENTUM', 'ATMOS · MEASURE · REDUCE · REPORT')
+    .replace('Let’s build something great.', 'Start measuring your impact.')
+    .replace('Good to have you back.', 'Return to your carbon picture.')
+    .replace('Pick up right where you left off.', 'Your emissions records and reduction insights are ready.')
+    .replace('Create your account. Add your first department whenever you’re ready.', 'Create your account, then organize carbon evidence by department.');
+}
+
+function carbonDashboard() {
+  if (admin() && !state.departments.length) return dashboard();
+  const data = state.emissions || { total_co2e_kg: 0, analyzed_bills: 0, pending_bills: 0, credits_used: 0, categories: [], monthly: [] };
+  const total = Number(data.total_co2e_kg || 0);
+  const leading = data.categories?.[0];
+  const latest = data.monthly?.at(-1);
+  const previous = data.monthly?.at(-2);
+  const change = previous?.co2e_kg ? ((Number(latest?.co2e_kg || 0) - Number(previous.co2e_kg)) / Number(previous.co2e_kg)) * 100 : null;
+  const trendClass = change !== null && change > 0 ? 'rising' : 'falling';
+  return `${pageHead('CARBON PERFORMANCE', `Good ${new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 18 ? 'afternoon' : 'evening'}, ${esc(state.profile.name.split(' ')[0])}.`, 'Your operational carbon picture, from evidence to action.', `<button class="subtle-button" data-action="refresh" ${state.busy ? 'disabled' : ''}>${icon('refresh', 16)} Refresh data</button>`)}
+    <section class="carbon-dashboard-hero">
+      <div class="dashboard-footprint"><span><i></i> TOTAL MEASURED FOOTPRINT</span><strong>${carbon(total)}<small>CO₂e</small></strong><p>${data.analyzed_bills ? `Calculated from ${count(data.analyzed_bills)} analyzed source document${data.analyzed_bills === 1 ? '' : 's'}.` : 'Upload evidence to establish your emissions baseline.'}</p><button class="pill-button light" data-route="emissions">Open emissions analysis ${icon('arrow', 17)}</button></div>
+      <div class="dashboard-signal"><span>PERIOD SIGNAL</span><div class="signal-mark ${trendClass}">${icon(change !== null && change > 0 ? 'arrowUp' : 'leaf', 30)}</div><strong>${change === null ? 'Baseline forming' : `${Math.abs(change).toFixed(0)}% ${change <= 0 ? 'decrease' : 'increase'}`}</strong><p>${change === null ? 'A second reporting period will reveal your direction of travel.' : `Compared with your previous reporting period.`}</p></div>
+      <div class="dashboard-rings"><span class="ring-one"></span><span class="ring-two"></span><span class="ring-core">${icon('leaf', 34)}</span></div>
+    </section>
+    <div class="carbon-stat-grid"><article><span class="stat-number">01</span><p>Largest source</p><strong>${esc(leading?.category || 'No data yet')}</strong><small>${leading && total ? `${(Number(leading.co2e_kg) / total * 100).toFixed(0)}% of measured emissions` : 'Analyze evidence to identify hotspots'}</small></article><article><span class="stat-number">02</span><p>Evidence status</p><strong>${count(data.analyzed_bills)} analyzed</strong><small>${count(data.pending_bills)} document${data.pending_bills === 1 ? '' : 's'} waiting</small></article><article><span class="stat-number">03</span><p>Carbon accounting</p><strong>${count(data.credits_used)} retired</strong><small>${count(state.balance?.balance)} credits available</small></article></div>
+    <div class="dashboard-columns carbon-dashboard-columns"><section class="surface-card carbon-action-card"><div class="card-heading"><div><span class="overline">NEXT BEST ACTIONS</span><h2>Keep your inventory moving</h2></div></div><button data-route="bills"><span class="action-number">01</span><span>${icon('upload', 19)}<b>Upload source evidence</b><small>Add a utility or operational PDF</small></span>${icon('chevron', 17)}</button><button data-route="emissions"><span class="action-number">02</span><span>${icon('cloud', 19)}<b>Review emissions</b><small>Explore sources, trends, and recommendations</small></span>${icon('chevron', 17)}</button>${admin() ? `<button data-route="purchase"><span class="action-number">03</span><span>${icon('leaf', 19)}<b>Manage carbon credits</b><small>Maintain cover for residual emissions</small></span>${icon('chevron', 17)}</button>` : ''}</section><section class="surface-card carbon-ledger-card"><div class="card-heading"><div><span class="overline">CARBON CREDIT LEDGER</span><h2>Recent accounting activity</h2></div><button data-route="activity">View all</button></div>${admin() ? activityRows(3) : '<div class="empty-state"><p>Your administrator manages the department credit ledger.</p></div>'}</section></div>`;
+}
+
+function carbonShell(body) {
+  return shell(body)
+    .replace('YOUR WORKSPACE', 'CARBON WORKSPACE')
+    .replace('More room to grow.', 'Build a lower-carbon future.')
+    .replace('Your team’s next big thing is just around the corner.', 'Measure first, then focus every reduction where it counts.')
+    .replace('Explore credit packs', 'Manage carbon credits')
+    .replace('YOUR SPACE TO DO MORE', 'MEASURE · REDUCE · REPORT');
+}
+
 function render() {
   if (state.loading) { app.innerHTML = '<div class="loading-screen">✳ <span>atmos.</span></div>'; return; }
   if (nav.some(([key]) => key === state.route) && !state.profile) { navigate('login'); return; }
   if (dataOfficer() && nav.some(([key]) => key === state.route) && state.route !== 'bills') { navigate('bills'); return; }
   const content = {
-    home: landing,
-    login: authPage,
-    register: authPage,
-    dashboard,
+    home: carbonLanding,
+    login: carbonAuth,
+    register: carbonAuth,
+    dashboard: carbonDashboard,
     purchase,
     bills: admin() || dataOfficer() ? bills : dashboard,
     emissions: admin() || complianceManager() ? emissions : dashboard,
@@ -318,14 +423,22 @@ function render() {
     team: admin() ? team : dashboard,
     departments: admin() ? departments : dashboard,
   }[state.route]();
-  app.innerHTML = state.profile && !['home', 'login', 'register'].includes(state.route) ? shell(content) : `${content}${toast()}`;
+  app.innerHTML = state.profile && !['home', 'login', 'register'].includes(state.route) ? carbonShell(content) : `${content}${toast()}`;
+  if (state.route === 'home') {
+    const revealItems = app.querySelectorAll('.carbon-workflow, .carbon-section-head, .workflow-grid article, .carbon-manifesto, .manifesto-points p, .carbon-credits-section, .carbon-footer');
+    revealItems.forEach((el, index) => { el.classList.add('scroll-reveal'); el.style.setProperty('--reveal-delay', `${Math.min(index % 4, 3) * 90}ms`); });
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } }), { threshold: 0.14 });
+      revealItems.forEach(el => observer.observe(el));
+    } else revealItems.forEach(el => el.classList.add('is-visible'));
+  }
   if (complianceManager()) app.querySelector('.sidebar-help button')?.remove();
   const source = app.querySelector('[name="from_department_id"]');
   const destination = app.querySelector('[name="to_department_id"]');
   if (source && destination && source.value === destination.value) {
     destination.value = [...destination.options].find((option) => option.value !== source.value)?.value ?? '';
   }
-  document.title = `${state.route === 'home' ? 'Atmos — Better together' : `${state.route[0].toUpperCase() + state.route.slice(1)} · Atmos`}`;
+  document.title = `${state.route === 'home' ? 'Atmos — Carbon intelligence' : `${state.route[0].toUpperCase() + state.route.slice(1)} · Atmos`}`;
 }
 
 window.addEventListener('hashchange', () => {
