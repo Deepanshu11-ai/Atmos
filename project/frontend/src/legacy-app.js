@@ -65,6 +65,43 @@ const state = {
 };
 
 const api = (path, options = {}) => request(path, { token: state.token, ...options });
+let razorpayScript;
+function loadRazorpay() {
+  if (window.Razorpay) return Promise.resolve();
+  if (!razorpayScript) razorpayScript = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Could not load Razorpay Checkout. Check your connection and try again.'));
+    document.head.append(script);
+  });
+  return razorpayScript;
+}
+async function openRazorpayCheckout(order) {
+  await loadRazorpay();
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      callback(value);
+    };
+    const checkout = new window.Razorpay({
+      key: order.key_id,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.order_id,
+      name: 'Atmos',
+      description: `${order.credits.toLocaleString()} carbon credits`,
+      prefill: { name: state.profile.name, email: state.profile.email },
+      theme: { color: '#173f35' },
+      handler: (payment) => finish(resolve, payment),
+      modal: { ondismiss: () => finish(reject, new Error('Payment was cancelled.')) },
+    });
+    checkout.on('payment.failed', (response) => finish(reject, new Error(response.error?.description || 'Payment failed. Please try again.')));
+    checkout.open();
+  });
+}
 async function loadPlans() {
   if (state.plansLoading) return;
   state.plansLoading = true;
@@ -244,7 +281,12 @@ function purchase() {
     if (!state.plansLoading && !state.plansError) void loadPlans();
     return `${pageHead('CREDIT PACKS', 'Buy credits.', 'Choose a pack for your department.')}<section class="surface-card"><div class="empty-state"><h3>${state.plansLoading ? 'Loading credit packs…' : 'Could not load credit packs.'}</h3><p>${esc(state.plansError || 'Fetching the latest available plans.')}</p>${state.plansLoading ? '' : '<button class="pill-button dark" data-action="reload-plans">Try again</button>'}</div></section>`;
   }
-  return purchaseWithDepartment();
+  return purchaseWithDepartment()
+    .replace('Displayed pack price', 'Amount to pay')
+    .replace('New balance', 'New balance after payment')
+    .replace('Demo purchase: credits are added immediately. No payment is collected.', 'Secure test payment powered by Razorpay. Credits are added only after verification.')
+    .replace('Adding credits…', 'Opening checkout…')
+    .replace('Confirm and add credits', state.selectedPlan ? `Pay ${money(state.plans[state.selectedPlan])}` : 'Pay securely');
 }
 function activity() {
   if (admin() && !state.departments.length) return `${pageHead('WORKSPACE ACTIVITY', 'Your story starts here.', 'Create your first department to start tracking credits.')}<section class="surface-card">${activityRows()}</section>`;
@@ -463,10 +505,12 @@ app.addEventListener('click', (event) => {
   if (target.dataset.action === 'refresh') execute(async () => { state.plans = await api('/credits/plans', { token: '' }); await refresh(); }, 'Your workspace is up to date.');
   if (target.dataset.action === 'logout') execute(async () => { await api('/auth/logout', { method: 'POST' }); clearSession(); navigate('home'); }, 'You’re signed out. See you soon!');
   if (target.dataset.action === 'confirm-purchase') execute(async () => {
-    await api('/admin/credits/purchases', { method: 'POST', body: { plan: state.selectedPlan, department_id: Number(state.department) } });
+    const order = await api('/admin/credits/purchases', { method: 'POST', body: { plan: state.selectedPlan, department_id: Number(state.department) } });
+    const payment = await openRazorpayCheckout(order);
+    await api('/admin/credits/purchases/verify', { method: 'POST', body: payment });
     await refresh();
     navigate('dashboard');
-  }, 'Credits added! Your whole team can use them now.');
+  }, 'Payment verified and credits added.');
   if (target.dataset.action === 'download-bill') execute(async () => {
     const blob = await api(`/bills/${encodeURIComponent(target.dataset.billId)}/file`, { responseType: 'blob', timeout: 120000 });
     const url = URL.createObjectURL(blob);
