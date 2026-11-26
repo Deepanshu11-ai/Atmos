@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import './style.css';
 import './carbon-theme.css';
 import './atmos-polish.css';
+import './atlas-redesign.css';
 
 function AtmosApp() {
   useEffect(() => {

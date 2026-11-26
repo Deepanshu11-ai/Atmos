@@ -1,7 +1,10 @@
 import './style.css';
 import './carbon-theme.css';
 import { request } from './api.js';
-import { mountThreePlanet } from './three-planet.js';
+import { mountForestScene, mountThreePlanet } from './three-planet.js';
+import { mountScrollForest } from './scroll-forest.js';
+import { mountCreditsLedger } from './credits-ledger-3d.js';
+import { mountFooterBiome } from './footer-biome-3d.js';
 import { enhanceMotion } from './motion-enhancements.js';
 
 const iconPaths = {
@@ -75,7 +78,7 @@ const state = {
   plans: {}, departments: [], users: [], bills: [], billsError: '', emissions: null, emissionsError: '', balance: null, transactions: [], department: '',
   busy: false, notice: null, selectedPlan: null, mobileMenu: false, loading: true,
   supportOpen: false, supportMessages: [], supportDraft: '', supportBusy: false,
-  plansLoading: false, plansError: '',
+  plansLoading: false, plansError: '', authMood: 'neutral',
 };
 
 const api = (path, options = {}) => request(path, { token: state.token, ...options });
@@ -296,6 +299,7 @@ async function execute(work, success) {
     if (success) state.notice = { type: 'success', text: success };
   } catch (error) {
     if (error.status === 401 && state.token) { clearSession(); navigate('login'); }
+    if (state.route === 'login' || state.route === 'register') state.authMood = 'sad';
     state.notice = { type: 'error', text: error.message };
   } finally {
     state.busy = false;
@@ -305,7 +309,7 @@ async function execute(work, success) {
 const logo = (dark = false) => `<span class="logo ${dark ? 'logo-dark' : ''}"><span class="logo-symbol">✳</span> atmos<span class="logo-period">.</span></span>`;
 
 function marketingHeader() {
-  return `<header class="marketing-header"><div class="site-container header-inner"><a href="#home" data-route="home" aria-label="Atmos home">${logo()}</a><nav class="marketing-links ${state.mobileMenu ? 'open' : ''}" aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#pricing">Pricing</a><a href="#why-atmos">Why Atmos</a></nav><div class="marketing-actions">${state.profile ? `<button class="plain-link" data-route="dashboard">Go to dashboard ${icon('arrowUp', 16)}</button>` : `<button class="plain-link" data-route="login">Log in</button><button class="pill-button dark" data-route="register">Get started ${icon('arrowUp', 16)}</button>`}</div><button class="mobile-toggle" data-action="menu" aria-label="Toggle navigation">${icon(state.mobileMenu ? 'close' : 'menu', 23)}</button></div></header>`;
+  return `<header class="marketing-header"><div class="site-container header-inner"><a class="nav-brand" href="#home" data-route="home" aria-label="Atmos home">${logo()}</a><nav class="marketing-links ${state.mobileMenu ? 'open' : ''}" aria-label="Main navigation"><a href="#how-it-works" data-scroll="how-it-works">How it works</a><a href="#pricing" data-scroll="pricing">Pricing</a><a href="#why-atmos" data-scroll="why-atmos">Why Atmos</a></nav><div class="marketing-actions">${state.profile ? `<button class="nav-workspace" data-route="dashboard">Open workspace ${icon('arrowUp', 15)}</button>` : `<button class="nav-login" data-route="login">Log in</button><button class="nav-cta" data-route="register">Get started ${icon('arrowUp', 15)}</button>`}</div><button class="mobile-toggle" data-action="menu" aria-label="Toggle navigation">${icon(state.mobileMenu ? 'close' : 'menu', 23)}</button></div></header>`;
 }
 function planCard(name, plan, index, context = 'landing') {
   const featured = index === 1;
@@ -965,7 +969,8 @@ function landing() {
 
 function authPageWithDepartment() {
   const register = state.route === 'register';
-  return `<div class="auth-layout"><section class="auth-side"><a href="#home" data-route="home">${logo(true)}</a><div class="auth-side-center"><span class="eyebrow-line">CARBON CLARITY, MADE CALM</span><h2>Better decisions<br>begin with <em>perspective.</em></h2><p>A considered workspace for the evidence, teams, and choices that shape your footprint.</p><div class="auth-art"><span class="auth-art-ring"></span><span class="auth-art-star">✳</span><span class="auth-art-small">✦</span></div></div><span class="auth-side-footer">ATMOS · MEASURE · REDUCE · REPORT</span></section><section class="auth-main"><div class="auth-top"><button class="text-action" data-route="home">← Back to home</button><span>${register ? 'Already have an account?' : 'New to Atmos?'} <button class="text-action emphasized" data-route="${register ? 'login' : 'register'}">${register ? 'Log in' : 'Get started'}</button></span></div><div class="auth-form-container"><span class="eyebrow-line"><span class="tiny-star">✳</span> ${register ? 'WELCOME TO ATMOS' : 'WELCOME BACK'}</span><h1>${register ? 'Start with a clearer picture.' : 'Your workspace is ready.'}</h1><p>${register ? 'Create your account, then turn everyday evidence into informed climate action.' : 'Continue measuring, prioritizing, and reporting with confidence.'}</p><form data-form="${register ? 'register' : 'login'}">${register ? field('Your name', 'name', 'text', 'placeholder="Alex Morgan" autocomplete="name" maxlength="255"') + field('Workspace / department name', 'department_name', 'text', 'placeholder="Your team’s name" maxlength="255"') : ''}${field('Work email', 'email', 'email', 'placeholder="you@company.com" autocomplete="username"')}${field('Password', 'password', 'password', `placeholder="${register ? 'At least 8 characters' : 'Your password'}" autocomplete="${register ? 'new-password' : 'current-password'}" ${register ? 'minlength="8" maxlength="128"' : ''}`)}<button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'One moment…' : register ? 'Create my workspace' : 'Log in to my workspace'} ${icon('arrow', 18)}</button></form><div class="auth-footnote">${icon('shield', 16)} Your workspace is yours. We’re glad you’re here.</div></div></section></div>`;
+  const mood = ['sad', 'happy', 'jump'].includes(state.authMood) ? state.authMood : 'neutral';
+  return `<div class="auth-layout auth-layout-clean"><section class="auth-main"><div class="auth-top"><a href="#home" data-route="home">${logo()}</a><span>${register ? 'Already have an account?' : 'New to Atmos?'} <button class="text-action emphasized" data-route="${register ? 'login' : 'register'}">${register ? 'Log in' : 'Get started'}</button></span></div><div class="auth-experience"><div class="auth-form-container"><span class="eyebrow-line">${register ? 'WELCOME TO ATMOS' : 'WELCOME BACK'}</span><h1>${register ? 'Start with a clearer picture.' : 'Your workspace is ready.'}</h1><p>${register ? 'Create your account, then turn everyday evidence into informed climate action.' : 'Continue measuring, prioritizing, and reporting with confidence.'}</p><form data-form="${register ? 'register' : 'login'}">${register ? field('Your name', 'name', 'text', 'placeholder="Alex Morgan" autocomplete="name" maxlength="255"') + field('Workspace / department name', 'department_name', 'text', 'placeholder="Your team’s name" maxlength="255"') : ''}${field('Work email', 'email', 'email', 'placeholder="you@company.com" autocomplete="username" required')}${field('Password', 'password', 'password', `placeholder="${register ? 'At least 8 characters' : 'Your password'}" autocomplete="${register ? 'new-password' : 'current-password'}" required ${register ? 'minlength="8" maxlength="128"' : ''}`)}<button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Working…' : register ? 'Create your workspace' : 'Log in to my workspace'} ${icon('arrow', 18)}</button></form><div class="auth-assurance">${icon('shield', 18)} <span>${register ? 'Your information stays private and protected.' : 'Your workspace is yours. We’re glad you’re here.'}</span></div></div><aside class="auth-earth-stage" aria-hidden="true"><div class="auth-earth ${mood}"><span class="auth-earth-glow"></span><i class="earth-orbit orbit-one"></i><i class="earth-orbit orbit-two"></i><i class="earth-arm arm-left"></i><i class="earth-arm arm-right"></i><span class="auth-earth-sphere"><i class="earth-eye eye-left"></i><i class="earth-eye eye-right"></i><i class="earth-mouth"></i></span><i class="earth-leg leg-left"></i><i class="earth-leg leg-right"></i></div><p>${mood === 'sad' ? 'Let’s check those details.' : mood === 'jump' ? 'Looking good.' : mood === 'happy' ? 'Ready when you are.' : 'Your climate workspace.'}</p></aside></div></section></div>`;
 }
 function authPage() {
   return authPageWithDepartment()
@@ -1078,118 +1083,31 @@ function carbonLanding() {
   const signedInRoute = state.profile ? 'dashboard' : 'register';
   return `<div class="marketing carbon-marketing">${marketingHeader()}
     <main>
+      <div class="ambient-forest-host" data-ambient-forest aria-hidden="true"></div>
       <section class="carbon-hero site-container">
         <div class="carbon-hero-copy">
           <span class="carbon-kicker"><i></i> Carbon intelligence for operating teams</span>
-          <h1>Measure what<br>your business<br><em>leaves behind.</em></h1>
+          <h1>Measure what<br>your business<em>leaves behind.</em></h1>
           <p>Turn utility bills and operational evidence into a clear emissions picture. Track CO₂e, identify hotspots, and move from reporting to reduction.</p>
-          <div class="hero-actions">
-            <button class="pill-button dark large" data-route="${signedInRoute}">${state.profile ? 'Open carbon dashboard' : 'Start measuring'} ${icon('arrowUp', 18)}</button>
-            <a class="carbon-text-link" href="#how-it-works">Explore the workflow ${icon('arrow', 17)}</a>
+           <div class="hero-actions">
+             <button class="atmos-button atmos-button-primary" data-route="${signedInRoute}">${state.profile ? 'Open workspace' : 'Start measuring'} ${icon('arrowUp', 17)}</button>
+             <a class="atmos-button atmos-button-secondary" href="#how-it-works" data-scroll="how-it-works">Explore the workflow ${icon('arrow', 17)}</a>
           </div>
           <div class="carbon-proof"><span>${icon('shield', 18)}</span><p><strong>Evidence-led accounting</strong> Every estimate stays connected to its source document.</p></div>
         </div>
-        <div class="carbon-hero-visual" aria-label="Interactive carbon globe with floating emissions indicators">
-  <div class="three-planet-host" data-three-planet aria-label="Interactive three-dimensional carbon data planet"></div>
-  <div class="globe-stage" data-globe-stage tabindex="0" aria-label="A three-dimensional carbon globe showing electricity, transport, operations, and waste emissions">
-
-    <!-- Atmospheric glow -->
-    <div class="globe-atmosphere"></div>
-
-    <!-- Orbital rings -->
-    <div class="globe-orbit orbit-a">
-      <span class="orbit-node"></span>
-    </div>
-
-    <div class="globe-orbit orbit-b">
-      <span class="orbit-node orbit-node-two"></span>
-    </div>
-
-    <div class="globe-orbit orbit-c"></div>
-
-    <div class="globe-orbit orbit-d">
-      <span class="orbit-node orbit-node-three"></span>
-    </div>
-
-    <!-- Globe -->
-    <div class="carbon-globe">
-
-      <div class="globe-shine"></div>
-
-      <div class="globe-land land-one"></div>
-      <div class="globe-land land-two"></div>
-      <div class="globe-land land-three"></div>
-
-      <div class="globe-grid"></div>
-
-      <div class="globe-3d-highlight"></div>
-
-      <div class="globe-core-mark">✳</div>
-
-    </div>
-
-    <!-- Floating carbon indicators -->
-    <div class="co2-bubble bubble-one">
-      <span>CO₂</span>
-      <small>Electricity</small>
-    </div>
-
-    <div class="co2-bubble bubble-two">
-      <span>CO₂</span>
-      <small>Transport</small>
-    </div>
-
-    <div class="co2-bubble bubble-three">
-      <span>CO₂</span>
-      <small>Operations</small>
-    </div>
-
-    <div class="co2-bubble bubble-four">
-      <span>CO₂</span>
-      <small>Waste</small>
-    </div>
-
-    <!-- Carbon dashboard floating card -->
-    <div class="carbon-score">
-      <span>ESTIMATED FOOTPRINT</span>
-
-      <strong>
-        12.8
-        <small>t CO₂e</small>
-      </strong>
-
-      <div>
-        <i></i>
-        <b>18% lower</b> than last period
-      </div>
-    </div>
-
-    <!-- Data chips -->
-    <div class="source-chip source-chip-one">
-      ${icon('bolt', 16)}
-      Electricity
-      <b>48%</b>
-    </div>
-
-    <div class="source-chip source-chip-two">
-      ${icon('cloud', 16)}
-      Transport
-      <b>27%</b>
-    </div>
-
-    <div class="orbit-leaf">
-      ${icon('leaf', 34)}
-    </div>
-
-    <!-- Small floating data particles -->
-    <div class="globe-particle particle-one"></div>
-    <div class="globe-particle particle-two"></div>
-    <div class="globe-particle particle-three"></div>
-
-  </div>
-        </div>
+         <div class="carbon-hero-visual" aria-label="Interactive carbon globe">
+           <div class="three-planet-host" data-three-planet aria-label="Interactive three-dimensional carbon data planet"></div>
+         </div>
       </section>
       <section class="carbon-metrics"><div class="site-container"><span>ONE AUDITABLE WORKFLOW</span><strong>Evidence</strong><i></i><strong>Measurement</strong><i></i><strong>Reduction</strong><i></i><strong>Reporting</strong></div></section>
+      <section class="forest-journey" aria-label="Scroll through a living three-dimensional forest">
+        <div class="forest-pin">
+          <div class="forest-canvas-host" data-forest-canvas></div>
+          <div class="forest-vignette" aria-hidden="true"></div>
+          <div class="forest-copy site-container"><span class="carbon-kicker light"><i></i> THE ATMOS JOURNEY</span><div class="forest-feature is-active" data-forest-feature="0"><b>01 / EVIDENCE</b><h2>Bring every<br><em>source to life.</em></h2><p>Upload bills, utility statements, and operational records into one trusted evidence trail.</p></div><div class="forest-feature" data-forest-feature="1"><b>02 / MEASUREMENT</b><h2>Turn documents<br>into <em>clear data.</em></h2><p>Extract activity data, apply visible assumptions, and calculate CO₂e with source-level context.</p></div><div class="forest-feature" data-forest-feature="2"><b>03 / INTELLIGENCE</b><h2>Find the signals<br>that <em>matter most.</em></h2><p>See hotspots, trends, and the operational sources shaping your footprint across every team.</p></div><div class="forest-feature" data-forest-feature="3"><b>04 / ACTION</b><h2>Turn clarity<br>into <em>momentum.</em></h2><p>Prioritise reductions, account for residual impact, and report progress with confidence.</p></div></div>
+          <div class="forest-progress"><span data-forest-readout>00% / INTO THE CANOPY</span><i><b></b></i></div>
+        </div>
+      </section>
       <section class="carbon-signal-strip site-container" aria-label="Atmos platform capabilities">
         <article><span>01</span><div><strong>Source-linked</strong><p>Every carbon estimate stays connected to its underlying operational evidence.</p></div></article>
         <article><span>02</span><div><strong>Review-ready</strong><p>Keep assumptions, category detail, and department context visible to your team.</p></div></article>
@@ -1576,6 +1494,7 @@ function carbonLanding() {
   </div>
 
   <div class="credits-visual-panel">
+    <div class="credits-ledger-host" data-credits-ledger></div>
     <div class="credits-visual-orbit credits-orbit-one"></div>
     <div class="credits-visual-orbit credits-orbit-two"></div>
 
@@ -1612,68 +1531,24 @@ function carbonLanding() {
 </section>
     </main>
 <footer class="carbon-footer carbon-footer-enhanced">
-  <div class="footer-top">
-
-    <div class="footer-brand-block">
-      <a href="#home" data-route="home">
-        ${logo()}
-      </a>
-
-      <p>
-        Clarity for your footprint.<br>
-        Confidence for your next move.
-      </p>
-    </div>
-
-    <div class="footer-navigation">
-
-      <div class="footer-column">
-        <span>EXPLORE</span>
-        <a href="#how-it-works">How it works</a>
-        <a href="#why-atmos">Why Atmos</a>
-        <a href="#pricing">Carbon accounting</a>
-      </div>
-
-      <div class="footer-column">
-        <span>YOUR WORKSPACE</span>
-        <button data-route="login">Log in</button>
-        <button data-route="register">Get started</button>
-      </div>
-
-    </div>
-
-    <div class="footer-message">
-      <span class="footer-message-label">
-        A SMALLER FOOTPRINT.
-      </span>
-
-      <h3>
-        Better decisions.<br>
-        <em>Better tomorrow.</em>
-      </h3>
-
-      <p>Make each reporting cycle more useful than the last.</p>
-
-      <button class="footer-message-action" data-route="${signedInRoute}">${state.profile ? 'Open workspace' : 'Start measuring'} ${icon('arrowUp', 15)}</button>
-
-      <span class="footer-message-mark">✳</span>
-    </div>
-
+  <div class="footer-biome" data-footer-biome aria-hidden="true"></div>
+  <div class="footer-aurora" aria-hidden="true"></div>
+  <div class="footer-data-paths" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="footer-leaf-fall" aria-hidden="true">
+    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
   </div>
-
-  <div class="footer-bottom">
-    <a href="#home" data-route="home">
-      ${logo()}
-    </a>
-
-    <span>
-      © ${new Date().getFullYear()} Atmos
-    </span>
-
-    <span class="footer-bottom-note">
-      MEASURE · REDUCE · REPORT
-    </span>
-    <span class="footer-legal-links"><button data-route="privacy">Privacy</button><button data-route="terms">Terms</button></span>
+  <div class="footer-leaf-bed" aria-hidden="true"></div>
+  <div class="footer-premium">
+    <div class="footer-premium-intro">
+      <div class="footer-premium-brand"><a href="#home" data-route="home">${logo()}</a><span>CARBON INTELLIGENCE / 2026</span></div>
+      <div class="footer-premium-statement"><span>MAKE THE NEXT MOVE COUNT</span><h2>Carbon clarity for<br><em>better business.</em></h2></div>
+      <div class="footer-premium-action"><p>Bring evidence, calculation, and action into one accountable system.</p><button data-route="${signedInRoute}">${state.profile ? 'Open your workspace' : 'Start measuring'} ${icon('arrowUp', 15)}</button></div>
+    </div>
+    <div class="footer-premium-links">
+      <p>Built for teams turning climate data into practical progress.</p>
+      <nav aria-label="Footer navigation"><div><span>EXPLORE</span><a href="#how-it-works">How it works</a><a href="#why-atmos">Why Atmos</a><a href="#pricing">Carbon accounting</a></div><div><span>WORKSPACE</span><button data-route="login">Log in</button><button data-route="register">Get started</button></div></nav>
+    </div>
+    <div class="footer-premium-bottom"><span>© ${new Date().getFullYear()} Atmos</span><span>MEASURE · REDUCE · REPORT</span><span><button data-route="privacy">Privacy</button><button data-route="terms">Terms</button></span></div>
   </div>
 </footer>
 <div class="landing-leaf-cascade" aria-hidden="true">
@@ -1721,6 +1596,7 @@ function carbonDashboard() {
         <span class="ring-core">${icon('leaf', 28)}</span>
         <p class="dashboard-visual-caption">Evidence becomes<br><strong>climate clarity.</strong></p>
       </div>
+      <div class="dashboard-planet-host" data-three-dashboard aria-label="Interactive carbon data planet"></div>
     </section>
     <div class="carbon-stat-grid"><article><span class="stat-number">01</span><p>Largest source</p><strong>${esc(leading?.category || 'No data yet')}</strong><small>${leading && total ? `${(Number(leading.co2e_kg) / total * 100).toFixed(0)}% of measured emissions` : 'Analyze evidence to identify hotspots'}</small></article><article><span class="stat-number">02</span><p>Evidence status</p><strong>${count(data.analyzed_bills)} analyzed</strong><small>${count(data.pending_bills)} document${data.pending_bills === 1 ? '' : 's'} waiting</small></article><article><span class="stat-number">03</span><p>Carbon accounting</p><strong>${count(data.credits_used)} retired</strong><small>${count(state.balance?.balance)} credits available</small></article></div>
     <div class="dashboard-columns carbon-dashboard-columns"><section class="surface-card carbon-action-card"><div class="card-heading"><div><span class="overline">NEXT BEST ACTIONS</span><h2>Keep your inventory moving</h2></div></div><button data-route="bills"><span class="action-number">01</span><span>${icon('upload', 19)}<b>Upload source evidence</b><small>Add a utility or operational PDF</small></span>${icon('chevron', 17)}</button><button data-route="emissions"><span class="action-number">02</span><span>${icon('cloud', 19)}<b>Review emissions</b><small>Explore sources, trends, and recommendations</small></span>${icon('chevron', 17)}</button>${admin() ? `<button data-route="purchase"><span class="action-number">03</span><span>${icon('leaf', 19)}<b>Manage carbon credits</b><small>Maintain cover for residual emissions</small></span>${icon('chevron', 17)}</button>` : ''}</section><section class="surface-card carbon-ledger-card"><div class="card-heading"><div><span class="overline">CARBON CREDIT LEDGER</span><h2>Recent accounting activity</h2></div><button data-route="activity">View all</button></div>${admin() ? activityRows(3) : '<div class="empty-state"><p>Your administrator manages the department credit ledger.</p></div>'}</section></div>`;
@@ -1770,6 +1646,9 @@ function carbonShell(body) {
 }
 
 function render() {
+  // Remove a legacy hero annotation that may survive a Vite hot-module update.
+  // The current hero intentionally contains no copy over the Earth artwork.
+  document.querySelectorAll('.hero-visual-caption').forEach((element) => element.remove());
   if (state.loading) { app.innerHTML = '<div class="loading-screen">✳ <span>atmos.</span></div>'; return; }
   if (nav.some(([key]) => key === state.route) && !state.profile) { navigate('login'); return; }
   if (dataOfficer() && nav.some(([key]) => key === state.route) && state.route !== 'bills') { navigate('bills'); return; }
@@ -1801,9 +1680,7 @@ function render() {
     '.workflow-new-item, ' +
     '.workflow-new-bottom, ' +
     '.carbon-manifesto, ' +
-    '.manifesto-points p, ' +
-    '.carbon-credits-section, ' +
-    '.carbon-footer'
+    '.manifesto-points p'
   );
 
   revealItems.forEach((el, index) => {
@@ -1852,9 +1729,26 @@ function render() {
 
    }
 
-  const threePlanet = app.querySelector('[data-three-planet]');
-  mountThreePlanet(threePlanet, { paused: false });
-  const globeStage = app.querySelector('[data-globe-stage]');
+   const threePlanet = app.querySelector('[data-three-planet]');
+   const dashboardPlanet = app.querySelector('[data-three-dashboard]');
+    if (threePlanet) mountThreePlanet(threePlanet, { paused: false });
+    else if (dashboardPlanet) mountThreePlanet(dashboardPlanet, { paused: false, variant: 'dashboard' });
+    mountForestScene(app.querySelector('[data-ambient-forest]'));
+    mountScrollForest(app.querySelector('.forest-journey'));
+    mountCreditsLedger(app.querySelector('.carbon-credits-section'));
+    const leafCascade = app.querySelector('.landing-leaf-cascade');
+    const forestJourney = app.querySelector('.forest-journey');
+    if (leafCascade && forestJourney) {
+      const placeLeafCascade = () => {
+        // The cascade's containing block is the full marketing page. Starting
+        // it at the forest's bottom makes leaves emerge from the completed
+        // forest journey and travel all the way into the footer leaf bed.
+        leafCascade.style.setProperty('--leaf-cascade-start', `${forestJourney.offsetTop + forestJourney.offsetHeight}px`);
+      };
+      placeLeafCascade();
+      window.addEventListener('resize', placeLeafCascade, { passive: true });
+    }
+   const globeStage = app.querySelector('[data-globe-stage]');
   const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   if (globeStage && !reducedMotion) {
     const setGlobeTilt = (event) => {
@@ -1893,11 +1787,36 @@ window.addEventListener('hashchange', () => {
   render();
   window.scrollTo(0, 0);
 });
+function playNavigationTransition(origin, complete) {
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) { complete(); return; }
+  const flash = document.createElement('span');
+  const bounds = origin.getBoundingClientRect();
+  const inWorkspace = Boolean(origin.closest('.workspace, .app-shell, .app-sidebar, .app-header')) || !['home', 'login', 'register', 'privacy', 'terms', 'ai-cfo'].includes(state.route);
+  flash.className = `atmos-nav-transition${inWorkspace ? ' workspace-transition' : ''}`;
+  flash.style.setProperty('--transition-x', `${bounds.left + bounds.width / 2}px`);
+  flash.style.setProperty('--transition-y', `${bounds.top + bounds.height / 2}px`);
+  document.body.append(flash);
+  origin.classList.add('is-navigating');
+  window.setTimeout(complete, inWorkspace ? 110 : 165);
+  window.setTimeout(() => { origin.classList.remove('is-navigating'); flash.remove(); }, inWorkspace ? 310 : 680);
+}
+
 app.addEventListener('click', (event) => {
-  const target = event.target.closest('[data-route], [data-action], [data-select-plan]');
+  const target = event.target.closest('[data-route], [data-scroll], [data-action], [data-select-plan]');
   if (!target || target.disabled) return;
+  if (target.dataset.scroll) {
+    event.preventDefault();
+    const destination = document.getElementById(target.dataset.scroll);
+    if (!destination) return;
+    state.mobileMenu = false;
+    playNavigationTransition(target, () => {
+      history.replaceState(null, '', `#${target.dataset.scroll}`);
+      destination.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return;
+  }
   if (target.dataset.action === 'close-support') state.supportOpen = false;
-  if (target.dataset.route) { event.preventDefault(); navigate(target.dataset.route); }
+  if (target.dataset.route) { event.preventDefault(); playNavigationTransition(target, () => navigate(target.dataset.route)); return; }
   if (target.dataset.selectPlan) { state.selectedPlan = target.dataset.selectPlan; render(); }
    if (target.dataset.action === 'menu') { state.mobileMenu = !state.mobileMenu; render(); }
   if (target.dataset.action === 'dismiss') { state.notice = null; render(); }
@@ -1985,6 +1904,14 @@ app.addEventListener('change', (event) => {
 });
 app.addEventListener('input', (event) => {
   if (event.target.matches('[data-support-input]')) state.supportDraft = event.target.value;
+  const form = event.target.closest('form[data-form="login"], form[data-form="register"]');
+  if (form) {
+    state.authMood = form.checkValidity() ? 'happy' : 'neutral';
+    const earth = app.querySelector('.auth-earth');
+    earth?.classList.toggle('happy', state.authMood === 'happy');
+    earth?.classList.toggle('sad', false);
+    earth?.classList.toggle('neutral', state.authMood !== 'happy');
+  }
 });
 app.addEventListener('keydown', (event) => {
   if (event.key !== 'Enter' || !event.target.matches('[data-support-input]')) return;
@@ -1994,7 +1921,21 @@ app.addEventListener('keydown', (event) => {
 app.addEventListener('submit', (event) => {
   event.preventDefault();
   const form = event.target;
+  if ((form.dataset.form === 'login' || form.dataset.form === 'register') && !form.checkValidity()) {
+    state.authMood = 'sad';
+    form.reportValidity();
+    const earth = app.querySelector('.auth-earth');
+    earth?.classList.remove('happy', 'neutral');
+    earth?.classList.add('sad');
+    return;
+  }
   const values = Object.fromEntries(new FormData(form));
+  if (form.dataset.form === 'login' || form.dataset.form === 'register') {
+    state.authMood = 'jump';
+    const earth = app.querySelector('.auth-earth');
+    earth?.classList.remove('sad', 'neutral', 'happy');
+    earth?.classList.add('jump');
+  }
   execute(async () => {
     switch (form.dataset.form) {
       case 'register':
