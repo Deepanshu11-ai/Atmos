@@ -1,19 +1,29 @@
 # Atmos
 
+> 🌿 **Technical guide** — run, configure, integrate, test, and deploy the Atmos climate-accounting workspace.
+
 Atmos is a climate-accounting workspace for teams. It lets organizations upload operational bills, estimate carbon emissions from the bill evidence, manage prepaid analysis credits, and generate department reports.
 
 The application consists of a FastAPI backend, a Vite frontend, and a PostgreSQL database. Production Docker builds serve both the API and the compiled frontend from one container.
 
-## What it does
+```text
+  📄 Source bills  ──▶  ✨ AI analysis  ──▶  🌍 CO2e insight  ──▶  📊 Report
+        │                     │                    │                    │
+        └─────────────────────┴──── department-scoped workspace ────────┘
+```
 
-- **Account and team management** — public owner registration, login sessions, departments, and role-based team access.
-- **Bill management** — upload and retrieve PDF bills (up to 10 MB), optionally import a PDF through Google Drive Picker.
-- **Emissions analysis** — admins and Compliance Managers can analyze uploaded bills with Azure AI Foundry and view estimated CO2e, category, confidence, and reduction suggestions.
-- **Prepaid credits** — purchase credit packs through Razorpay, verify payments server-side, spend credits on analysis, and transfer credits between departments.
-- **Reports** — download or email a department PDF summary of bills, emissions, credits, and verified payments.
-- **Safe in-app help** — a constrained, role-aware helper for product guidance; it cannot access data, perform actions, or process secrets.
+<p align="center">⎯⎯⎯&nbsp;&nbsp; 🌱 &nbsp;&nbsp;⎯⎯⎯</p>
 
-## Roles
+## ✨ What it does
+
+- 👥 **Account and team management** — public owner registration, login sessions, departments, and role-based team access.
+- 📄 **Bill management** — upload and retrieve PDF bills (up to 10 MB), optionally import a PDF through Google Drive Picker.
+- ✨ **Emissions analysis** — admins and Compliance Managers can analyze uploaded bills with Azure AI Foundry and view estimated CO2e, category, confidence, and reduction suggestions.
+- 💳 **Prepaid credits** — purchase credit packs through Razorpay, verify payments server-side, spend credits on analysis, and transfer credits between departments.
+- 📊 **Reports** — download or email a department PDF summary of bills, emissions, credits, and verified payments.
+- 🛡️ **Safe in-app help** — a constrained, role-aware helper for product guidance; it cannot access data, perform actions, or process secrets.
+
+## 👥 Roles
 
 | Role | Access |
 | --- | --- |
@@ -21,7 +31,9 @@ The application consists of a FastAPI backend, a Vite frontend, and a PostgreSQL
 | `data_officer` | Uploads and views bills for their department. |
 | `compliance_manager` | Views emissions analytics and generates reports for their department. |
 
-## Project structure
+<p align="center">⎯⎯⎯&nbsp;&nbsp; 🗂️ &nbsp;&nbsp;⎯⎯⎯</p>
+
+## 🗂️ Project structure
 
 ```text
 project/
@@ -33,14 +45,16 @@ project/
 └── render.yaml          # Render deployment blueprint
 ```
 
-## Prerequisites
+## 🧰 Prerequisites
 
 - Python 3.12+
 - Node.js 22+ and npm (for frontend development)
 - PostgreSQL database, such as Neon
 - Docker Desktop (optional, for the production-like local setup)
 
-## Configure environment variables
+<p align="center">⎯⎯⎯&nbsp;&nbsp; 🔐 &nbsp;&nbsp;⎯⎯⎯</p>
+
+## 🔐 Configure environment variables
 
 Create `project/.env`. It is intentionally ignored by Git. At minimum, configure a PostgreSQL connection string:
 
@@ -50,7 +64,7 @@ NEON_DATABASE_URL=postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require
 
 `DATABASE_URL` is also accepted as an alternative name. Atmos initializes/upgrades its tables when the API starts.
 
-### Optional integrations
+### 🔌 Optional integrations
 
 | Feature | Variables |
 | --- | --- |
@@ -61,9 +75,11 @@ NEON_DATABASE_URL=postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require
 
 Never commit `.env`, API keys, database passwords, payment secrets, or SMTP credentials.
 
-## Run locally
+<p align="center">⎯⎯⎯&nbsp;&nbsp; 🚀 &nbsp;&nbsp;⎯⎯⎯</p>
 
-### Backend
+## 🚀 Run locally
+
+### 01 — 🐍 Backend
 
 From `project/`:
 
@@ -80,7 +96,7 @@ The API runs at `http://127.0.0.1:8000`. Health check:
 curl http://127.0.0.1:8000/health
 ```
 
-### Frontend development server
+### 02 — ⚡ Frontend development server
 
 In a second terminal:
 
@@ -92,7 +108,7 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. Vite forwards browser requests from `/api/*` to `http://127.0.0.1:8000/*`.
 
-### Run the full production-style stack with Docker
+### 03 — 🐳 Run the full production-style stack with Docker
 
 From `project/`:
 
@@ -106,16 +122,18 @@ Open `http://localhost:8000`. The Docker image builds the frontend and FastAPI s
 docker compose down
 ```
 
-## Typical user workflow
+<p align="center">📄 &nbsp;→&nbsp; ✨ &nbsp;→&nbsp; 🌍 &nbsp;→&nbsp; 📊</p>
 
-1. Register an owner account from the app or `POST /auth/register`.
-2. Sign in and create a department.
-3. Invite a **Data Officer** to upload source PDF bills and/or a **Compliance Manager** to review emissions.
-4. Purchase a credit pack (admin only) and complete Razorpay checkout.
-5. Upload bills, analyze pending bills, and review estimated emissions and suggestions.
-6. Download or email the department report.
+## 🌍 Typical user workflow
 
-## API overview
+1. ✨ Register an owner account from the app or `POST /auth/register`.
+2. 🧩 Sign in and create a department.
+3. 👥 Invite a **Data Officer** to upload source PDF bills and/or a **Compliance Manager** to review emissions.
+4. 💳 Purchase a credit pack (admin only) and complete Razorpay checkout.
+5. 🌍 Upload bills, analyze pending bills, and review estimated emissions and suggestions.
+6. 📊 Download or email the department report.
+
+## 🔗 API overview
 
 The browser uses `/api/...` in production. FastAPI accepts the equivalent routes without `/api` as well.
 
@@ -136,7 +154,9 @@ Authenticated endpoints require the bearer token returned by `/auth/login`:
 Authorization: Bearer <access_token>
 ```
 
-## Payments and credits
+<p align="center">⎯⎯⎯&nbsp;&nbsp; 💳 &nbsp;&nbsp;⎯⎯⎯</p>
+
+## 💳 Payments and credits
 
 The current catalog is configured in `app/credits.py`:
 
@@ -146,7 +166,7 @@ The current catalog is configured in `app/credits.py`:
 
 Razorpay orders are created at the server-defined price. The backend verifies the checkout signature and payment before adding credits, preventing client-side price manipulation and duplicate crediting.
 
-## Google Drive setup
+## ☁️ Google Drive setup
 
 To enable **Add from Google Drive**:
 
@@ -157,7 +177,7 @@ To enable **Add from Google Drive**:
 
 Atmos requests a short-lived, read-only token in the browser for the selected file. It does not store a user's Google token.
 
-## Azure AI Foundry setup
+## ✨ Azure AI Foundry setup
 
 Set these server-side values to enable bill analysis:
 
@@ -169,7 +189,9 @@ AZURE_AI_MODEL=your-model-deployment
 
 Atmos extracts readable PDF text and sends it to the configured model for a structured estimate. Scanned/image-only PDFs require OCR before upload. Results are decision-support estimates and should be reviewed before formal reporting.
 
-## Test and verify
+<p align="center">⎯⎯⎯&nbsp;&nbsp; 🧪 &nbsp;&nbsp;⎯⎯⎯</p>
+
+## 🧪 Test and verify
 
 ```bash
 # Backend workflow tests
@@ -184,7 +206,7 @@ npm test
 curl http://localhost:8000/health
 ```
 
-## Deploy to Render
+## ☀️ Deploy to Render
 
 `render.yaml` defines a Docker web service. If this repository contains `project/` as a subdirectory, set Render's **Root Directory** to `project`.
 
@@ -198,7 +220,9 @@ The container honors Render's `PORT` environment variable. The Docker image does
 
 For Google Drive, add the exact Render URL—for example `https://your-service.onrender.com`—to the authorized JavaScript origins in Google Cloud.
 
-## Security notes
+<p align="center">⎯⎯⎯&nbsp;&nbsp; 🛡️ &nbsp;&nbsp;⎯⎯⎯</p>
+
+## 🛡️ Security notes
 
 - Passwords are stored as Argon2 hashes.
 - Sessions are bearer tokens stored as hashes server-side and can be revoked on logout.
