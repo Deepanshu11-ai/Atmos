@@ -59,6 +59,34 @@ The aliases `PROJECT_ENDPOINT`, `AZURE_API_KEY`, and `MODEL_NAME` are also suppo
 
 The application derives the resource's OpenAI-compatible endpoint from the project URL. PDF text is extracted by the backend, structured bill-level estimates are persisted, and previously analyzed bills are not sent again. Estimates are decision-support information and should be reviewed before formal emissions reporting. Scanned image-only PDFs require OCR before upload.
 
+### Google Drive imports
+
+The Bills page can import a PDF from the signed-in user's Google Drive. In Google Cloud, enable the **Google Drive API** and **Google Picker API**, create an OAuth web client and browser API key, then add the frontend origin (such as `http://127.0.0.1:5173`) to the OAuth client's authorized JavaScript origins. Add these values to the backend `.env`:
+
+```dotenv
+GOOGLE_DRIVE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_DRIVE_API_KEY=your-browser-api-key
+# Optional Google Cloud project number used by Drive Picker.
+GOOGLE_DRIVE_APP_ID=your-project-number
+```
+
+When a user selects **Add from Google Drive**, the browser requests a short-lived, read-only Drive token, downloads the selected PDF, and sends it through the existing bill-upload checks. Atmos does not store Google tokens or retain ongoing access to a user's Drive.
+
+## Transactional email
+
+Atmos can send a welcome email after public sign-up and a receipt after a verified credit purchase. Configure any SMTP provider in the backend `.env`:
+
+```dotenv
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_FROM=Atmos <no-reply@example.com>
+SMTP_USERNAME=your-smtp-username
+SMTP_PASSWORD=your-smtp-password
+SMTP_USE_TLS=true
+```
+
+Email is optional. If SMTP is not configured or delivery fails, account creation and verified credit purchases still complete; delivery failures are logged. Purchase receipts are marked as sent only after SMTP accepts them, avoiding duplicates when the verification endpoint is retried.
+
 ## Postman
 
 Import `postman_collection.json` and run its requests in order. It generates unique account emails and department names automatically, so **no admin credentials need to be set**. Each run creates a new owner, two departments, one Data Officer, a 100-credit purchase and a five-credit spend. Set `baseUrl` if the app does not run at `http://127.0.0.1:8000`.

@@ -1,5 +1,6 @@
 """Department bill storage for data officers."""
 
+import os
 from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID
@@ -34,6 +35,20 @@ def require_bill_viewer(
     if user.role not in ("admin", "data_officer"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Bill access is not available for this role")
     return user
+
+
+@router.get("/google-drive/config")
+def google_drive_config(uploader: User = Depends(require_bill_uploader)) -> dict[str, str | bool]:
+    """Return public settings required by the browser's Google Drive Picker."""
+    del uploader
+    client_id = os.getenv("GOOGLE_DRIVE_CLIENT_ID", "")
+    api_key = os.getenv("GOOGLE_DRIVE_API_KEY", "")
+    return {
+        "configured": bool(client_id and api_key),
+        "client_id": client_id,
+        "api_key": api_key,
+        "app_id": os.getenv("GOOGLE_DRIVE_APP_ID", ""),
+    }
 
 
 @router.get("", response_model=list[BillResponse])

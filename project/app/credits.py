@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import accessible_department, get_current_session, require_admin
 from app.database import CreditAccount, CreditPurchase, CreditTransaction, Department, User, UserSession, get_db
+from app.mail import send_purchase_receipt
 
 router = APIRouter(tags=["credits"])
 
@@ -120,6 +121,17 @@ def create_razorpay_order(payload: dict) -> dict:
 
 def fetch_razorpay_payment(payment_id: str) -> dict:
     return razorpay_request("GET", f"payments/{quote(payment_id, safe='')}")
+
+
+def send_purchase_receipt_if_needed(db: Session, purchase: CreditPurchase, admin: User) -> None:
+    if purchase.receipt_emailed_at is not None:
+        return
+    department = db.get(Department, purchase.department_id)
+    if department is not None and send_purchase_receipt(
+        admin.name, admin.email, department.name, purchase.credits, purchase.amount, purchase.currency,
+    ):
+        purchase.receipt_emailed_at = datetime.now(timezone.utc)
+        db.commit()
 
 
 @router.get("/credits/plans")
@@ -230,6 +242,7 @@ def verify_purchase(
     if purchase.status == "paid" and purchase.transaction_id is not None:
         transaction = db.get(CreditTransaction, purchase.transaction_id)
         if transaction is not None:
+            send_purchase_receipt_if_needed(db, purchase, admin)
             return transaction
     existing_payment = db.scalar(select(CreditPurchase.id).where(
         CreditPurchase.razorpay_payment_id == payload.razorpay_payment_id,
@@ -258,6 +271,7 @@ def verify_purchase(
     purchase.paid_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(transaction)
+    send_purchase_receipt_if_needed(db, purchase, admin)
     return transaction
 
 

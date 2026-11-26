@@ -260,6 +260,32 @@ class ProductWorkflowTest(unittest.TestCase):
             self.client.get(f"/emissions?department_id={department_id}", headers=admin).status_code, 200
         )
 
+    def test_google_drive_config_requires_bill_upload_access(self):
+        admin = self.owner("drive-owner@example.com")
+        department_id = self.department(admin, "Drive team")
+        configured = self.client.get("/bills/google-drive/config", headers=admin)
+        self.assertEqual(configured.status_code, 200, configured.text)
+        self.assertFalse(configured.json()["configured"])
+        created = self.client.post("/admin/users", headers=admin, json={
+            "name": "Compliance", "email": "drive-compliance@example.com",
+            "password": "a-strong-password", "role": "compliance_manager", "department_id": department_id,
+        })
+        self.assertEqual(created.status_code, 201, created.text)
+        login = self.client.post("/auth/login", json={
+            "email": "drive-compliance@example.com", "password": "a-strong-password",
+        })
+        headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
+        self.assertEqual(self.client.get("/bills/google-drive/config", headers=headers).status_code, 403)
+
+    def test_signup_and_verified_purchase_send_transactional_emails(self):
+        with patch("app.main.send_welcome_email") as welcome, patch("app.credits.send_purchase_receipt", return_value=True) as receipt:
+            headers = self.owner("email-owner@example.com")
+            welcome.assert_called_once_with("Owner", "email-owner@example.com")
+            department_id = self.department(headers, "Email team")
+            self.purchase(headers, "starter", department_id)
+            receipt.assert_called_once()
+            self.assertEqual(receipt.call_args.args[0:2], ("Owner", "email-owner@example.com"))
+
 
 if __name__ == "__main__":
     unittest.main()

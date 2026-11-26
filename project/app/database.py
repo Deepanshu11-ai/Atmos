@@ -106,6 +106,7 @@ class CreditPurchase(Base):
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now()
     )
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    receipt_emailed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Bill(Base):

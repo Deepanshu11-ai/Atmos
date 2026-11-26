@@ -24,6 +24,7 @@ const iconPaths = {
   file: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 13h6M9 17h6"/>',
   upload: '<path d="M12 16V4m-4 4 4-4 4 4M5 14v6h14v-6"/>',
   download: '<path d="M12 4v12m-4-4 4 4 4-4M5 20h14"/>',
+  drive: '<path d="m8 3 4 7-4 7H3l4-7-4-7h5Zm4 7 4-7h5l-4 7 4 7h-5l-4-7Zm-4 7h5l4 7H8l-4-7h4Z"/>',
 };
 const icon = (name, size = 20) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`;
 const nav = [
@@ -66,6 +67,8 @@ const state = {
 
 const api = (path, options = {}) => request(path, { token: state.token, ...options });
 let razorpayScript;
+let googleApiScript;
+let googleIdentityScript;
 function loadRazorpay() {
   if (window.Razorpay) return Promise.resolve();
   if (!razorpayScript) razorpayScript = new Promise((resolve, reject) => {
@@ -76,6 +79,54 @@ function loadRazorpay() {
     document.head.append(script);
   });
   return razorpayScript;
+}
+function loadGoogleScript(src, type) {
+  const cached = type === 'api' ? googleApiScript : googleIdentityScript;
+  if (cached) return cached;
+  const promise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = () => reject(new Error('Could not load Google Drive. Check your connection and try again.'));
+    document.head.append(script);
+  });
+  if (type === 'api') googleApiScript = promise;
+  else googleIdentityScript = promise;
+  return promise;
+}
+async function chooseGoogleDrivePdf() {
+  const config = await api('/bills/google-drive/config');
+  if (!config.configured) throw new Error('Google Drive is not configured. Ask an administrator to add GOOGLE_DRIVE_CLIENT_ID and GOOGLE_DRIVE_API_KEY.');
+  await Promise.all([
+    loadGoogleScript('https://apis.google.com/js/api.js', 'api'),
+    loadGoogleScript('https://accounts.google.com/gsi/client', 'identity'),
+  ]);
+  await new Promise((resolve, reject) => window.gapi.load('picker', { callback: resolve, onerror: () => reject(new Error('Could not start Google Drive Picker.')) }));
+  const token = await new Promise((resolve, reject) => {
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: config.client_id,
+      scope: 'https://www.googleapis.com/auth/drive.readonly',
+      callback: (response) => response.error ? reject(new Error(response.error_description || 'Google sign-in was not completed.')) : resolve(response.access_token),
+      error_callback: () => reject(new Error('Google sign-in was not completed.')),
+    });
+    client.requestAccessToken({ prompt: 'consent' });
+  });
+  const picked = await new Promise((resolve, reject) => {
+    const view = new window.google.picker.DocsView(window.google.picker.ViewId.PDFS).setIncludeFolders(true);
+    const picker = new window.google.picker.PickerBuilder().addView(view).setOAuthToken(token).setDeveloperKey(config.api_key).setCallback((data) => {
+      if (data.action === window.google.picker.Action.PICKED) resolve(data.docs[0]);
+      if (data.action === window.google.picker.Action.CANCEL) reject(new Error('Google Drive selection was cancelled.'));
+    });
+    if (config.app_id) picker.setAppId(config.app_id);
+    picker.build().setVisible(true);
+  });
+  const response = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(picked.id)}?alt=media`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!response.ok) throw new Error('Google Drive could not download the selected PDF.');
+  const blob = await response.blob();
+  if (blob.size > 10 * 1024 * 1024) throw new Error('PDF bills must be 10 MB or smaller.');
+  return new File([blob], picked.name || 'google-drive-bill.pdf', { type: 'application/pdf' });
 }
 async function openRazorpayCheckout(order) {
   await loadRazorpay();
@@ -944,7 +995,7 @@ function activity() {
 const fileSize = (bytes) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 function bills() {
   const rows = state.billsError ? `<div class="empty-state"><span class="empty-icon">${icon('refresh', 25)}</span><h3>Could not load stored bills.</h3><p>${esc(state.billsError)}</p><button class="subtle-button" data-action="refresh">Try again</button></div>` : state.bills.length ? `<div class="bill-list">${state.bills.map((bill) => `<div class="bill-row"><span class="bill-file-icon">${icon('file', 21)}</span><span class="bill-details"><strong>${esc(bill.filename)}</strong><small>${when(bill.created_at)} · ${fileSize(bill.size_bytes)}</small></span><button class="bill-download" data-action="download-bill" data-bill-id="${bill.id}" data-filename="${esc(bill.filename)}" ${state.busy ? 'disabled' : ''} aria-label="Download ${esc(bill.filename)}">${icon('download', 18)} Download</button></div>`).join('')}</div>` : `<div class="empty-state"><span class="empty-icon">${icon('file', 25)}</span><h3>No bills uploaded yet.</h3><p>Your stored PDF bills will appear here.</p></div>`;
-  const upload = `<section class="surface-card bill-upload-card"><span class="overline">ADD SUPPORTING DOCUMENT</span><h2>Upload a bill</h2><p>Select a PDF bill to store securely with this department’s records.</p><form data-form="bill"><label class="file-drop"><input name="file" type="file" accept="application/pdf,.pdf" required><span class="upload-mark">${icon('upload', 24)}</span><strong>Choose a PDF bill</strong><small>PDF only, up to 10 MB</small></label><button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Uploading…' : 'Upload and store bill'} ${icon('arrow', 17)}</button></form></section>`;
+  const upload = `<section class="surface-card bill-upload-card"><span class="overline">ADD SUPPORTING DOCUMENT</span><h2>Upload a bill</h2><p>Select a PDF bill to store securely with this department’s records.</p><form data-form="bill"><label class="file-drop"><input name="file" type="file" accept="application/pdf,.pdf" required><span class="upload-mark">${icon('upload', 24)}</span><strong>Choose a PDF bill</strong><small>PDF only, up to 10 MB</small></label><div class="upload-options"><span>or</span><button class="subtle-button drive-button" type="button" data-action="google-drive" ${state.busy ? 'disabled' : ''}>${icon('drive', 16)} Add from Google Drive</button></div><button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Uploading…' : 'Upload and store bill'} ${icon('arrow', 17)}</button></form></section>`;
   const eyebrow = dataOfficer() ? 'DATA OFFICER WORKSPACE' : 'ADMIN BILL RECORDS';
   const description = dataOfficer() ? 'Upload supporting bills and track the carbon credits allocated by your admin.' : `Review bills uploaded for ${esc(state.balance?.department_name || 'the selected department')}.`;
   return `${pageHead(eyebrow, 'Bills and carbon credits.', description, `<button class="subtle-button" data-action="refresh" ${state.busy ? 'disabled' : ''}>${icon('refresh', 16)} Refresh</button>`)}<section class="carbon-balance"><span class="stat-icon mint">${icon('spark', 21)}</span><div><span>${dataOfficer() ? 'CARBON CREDITS GIVEN BY ADMIN' : 'DEPARTMENT CARBON CREDITS'}</span><strong>${count(state.balance?.balance)}</strong><small>Available for ${esc(state.balance?.department_name || 'your department')}</small></div><span class="live-balance"><i></i> Updated balance</span></section><div class="bill-grid">${upload}<section class="surface-card stored-bills"><div class="card-heading"><div><span class="overline">DEPARTMENT RECORDS</span><h2>Stored bills <small class="count-tag">${state.bills.length}</small></h2></div></div>${rows}</section></div>`;
@@ -1756,6 +1807,14 @@ app.addEventListener('click', (event) => {
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   });
+  if (target.dataset.action === 'google-drive') execute(async () => {
+    const file = await chooseGoogleDrivePdf();
+    const body = new FormData();
+    body.append('file', file);
+    if (admin()) body.append('department_id', state.department);
+    await api('/bills', { method: 'POST', body });
+    await refresh();
+  }, 'Your Google Drive PDF has been stored.');
   if (target.dataset.action === 'analyze-emissions') execute(async () => {
     const query = admin() ? `?department_id=${encodeURIComponent(state.department)}` : '';
     const result = await api(`/emissions/analyze${query}`, { method: 'POST', timeout: 300000 });

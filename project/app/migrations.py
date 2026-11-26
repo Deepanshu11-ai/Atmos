@@ -22,6 +22,11 @@ def initialize_database(engine: Engine) -> None:
 
         Base.metadata.create_all(bind=conn)
 
+        if inspector.has_table("credit_purchases") and not any(
+            column["name"] == "receipt_emailed_at" for column in inspector.get_columns("credit_purchases")
+        ):
+            conn.execute(text("ALTER TABLE credit_purchases ADD COLUMN receipt_emailed_at TIMESTAMP"))
+
         # Analyses created before carbon-credit retirement was introduced have
         # no applied-credit marker and are reconciled on the next analysis run.
         if inspector.has_table("emission_analyses") and not any(

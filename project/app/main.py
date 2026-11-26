@@ -21,6 +21,7 @@ from app.credits import router as credit_router
 from app.emissions import router as emissions_router
 from app.database import CreditAccount, Department, User, UserSession, get_db, get_session_factory
 from app.migrations import initialize_database
+from app.mail import send_welcome_email
 from app.schemas import (
     CreateDepartmentRequest, CreateUserRequest, DepartmentResponse,
     LoginRequest, RegisterRequest, TokenResponse, UserResponse,
@@ -59,6 +60,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
         db.rollback()
         raise HTTPException(status_code=409, detail="Email already registered") from None
     db.refresh(user)
+    send_welcome_email(user.name, user.email)
     return user
 
 
