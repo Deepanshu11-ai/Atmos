@@ -234,7 +234,655 @@ function planCard(name, plan, index, context = 'landing') {
   return `<article class="pricing-card ${featured ? 'recommended' : ''}">${featured ? '<span class="recommended-label">MOST POPULAR</span>' : ''}<div class="pricing-card-top"><div class="plan-symbol ${esc(name)}">${icon(index === 0 ? 'spark' : index === 1 ? 'bolt' : 'layers', 21)}</div><span class="plan-caption">${name === 'starter' ? 'For getting started' : name === 'growth' ? 'For growing teams' : 'For bigger ideas'}</span></div><h3>${esc(name)}</h3><p class="plan-copy">${name === 'starter' ? 'A little goes a long way.' : name === 'growth' ? 'Room for your team to do more.' : 'Make space for the big stuff.'}</p><div class="plan-price">${money(plan)} <span>/ pack</span></div><div class="plan-credit"><strong>${count(plan.credits)}</strong> credits</div><div class="plan-divider"></div><ul><li>${icon('check', 16)} Shared across your department</li><li>${icon('check', 16)} Credits never expire</li><li>${icon('check', 16)} Track every credit used</li></ul><button class="pill-button ${featured ? 'dark' : 'outline'} plan-cta" data-${context === 'landing' ? 'route="register"' : `select-plan="${esc(name)}"`} ${state.busy || (context !== 'landing' && !admin()) ? 'disabled' : ''}>${context === 'landing' ? 'Get started' : admin() ? 'Choose ' + esc(name) : 'Admin access required'} ${icon('arrow', 17)}</button></article>`;
 }
 function landing() {
-  return `<div class="marketing">${marketingHeader()}<section class="hero site-container"><div class="hero-copy"><div class="eyebrow-line"><span class="tiny-star">✳</span> THE WAY FORWARD IS TOGETHER</div><h1>More possibility.<br><span>Less friction.</span></h1><p>Give your team the freedom to move. One shared balance, simple prepaid credits, and a clearer way to keep great work going.</p><div class="hero-actions"><button class="pill-button dark large" data-route="${state.profile ? 'dashboard' : 'register'}">${state.profile ? 'Open your workspace' : 'Create your workspace'} ${icon('arrowUp', 18)}</button><a class="hero-text-link" href="#how-it-works">See how it works ${icon('arrow', 17)}</a></div><div class="hero-caption"><span class="avatar-stack"><i>J</i><i>M</i><i>A</i></span><span>Made for teams that make things happen.</span></div></div><div class="hero-visual"><div class="visual-sun"></div><div class="visual-orbit orbit-one"></div><div class="visual-orbit orbit-two"></div><div class="visual-spark spark-one">✳</div><div class="visual-spark spark-two">✦</div><div class="visual-caption top-caption"><span class="caption-icon">${icon('spark', 20)}</span><span>Good things grow together.</span></div><div class="visual-card"><div class="visual-card-header"><span>${logo(true)}</span><span class="visual-mini-icon">${icon('arrowUp', 17)}</span></div><div class="visual-card-bottom"><span>YOUR SHARED SPACE</span><strong>More room<br>to create<span class="visual-dot">.</span></strong><div class="visual-card-footer"><span>WORK BETTER, TOGETHER</span><span>✳ ✳ ✳</span></div></div></div><div class="visual-caption bottom-caption"><span class="caption-icon warm">${icon('bolt', 18)}</span><span>Keep the momentum going</span></div></div></section><div class="marquee"><div class="site-container marquee-inner"><span>ONE BALANCE</span><b>✳</b><span>YOUR WHOLE TEAM</span><b>✳</b><span>ENDLESS MOMENTUM</span><b>✳</b><span>ALL IN ONE PLACE</span></div></div><section id="how-it-works" class="how site-container"><div class="section-intro"><div class="eyebrow-line"><span class="tiny-star">✳</span> A BETTER WAY TO WORK</div><h2>Everything flows<br><em>better together.</em></h2><p>All the essentials to keep your people moving, without the busywork getting in the way.</p></div><div class="feature-grid"><article class="feature-card peach"><span class="feature-icon">${icon('wallet', 25)}</span><span class="feature-number">01 /</span><h3>One balance.<br>Everyone covered.</h3><p>Buy credits once and your whole department can put them to work. No individual wallets, no extra steps.</p><div class="feature-art coins-art"><span></span><span></span><span></span></div></article><article class="feature-card lilac"><span class="feature-icon">${icon('people', 25)}</span><span class="feature-number">02 /</span><h3>Bring the whole<br>team along.</h3><p>Make room for everyone. Set up departments, add your people, and keep it all in sync.</p><div class="feature-art people-art"><span>J</span><span>A</span><span>M</span></div></article><article class="feature-card butter"><span class="feature-icon">${icon('clock', 25)}</span><span class="feature-number">03 /</span><h3>Know where<br>you stand.</h3><p>See your balance and credit history at a glance. A little clarity goes a long way.</p><div class="feature-art bars-art"><span></span><span></span><span></span><span></span><span></span></div></article></div></section><section class="story" id="why-atmos"><div class="site-container story-inner"><div class="story-art"><div class="story-disc"><div class="disc-ring">✳</div><div class="disc-center">a<span>.</span></div></div><span class="story-float one">✦</span><span class="story-float two">✳</span></div><div class="story-copy"><span class="eyebrow-line">MADE FOR MOMENTUM</span><h2>Your people have<br>big things to do.<br><em>Let them.</em></h2><p>When the little things just work, everyone has more room for what matters. Atmos gives your team a simpler way to share resources and keep moving forward.</p><button class="pill-button light" data-route="${state.profile ? 'dashboard' : 'register'}">Find your flow ${icon('arrowUp', 17)}</button></div></div></section><section class="pricing-section site-container" id="pricing"><div class="pricing-heading"><div><div class="eyebrow-line"><span class="tiny-star">✳</span> SIMPLE BY DESIGN</div><h2>Pick your pace.<br><em>Grow your way.</em></h2></div><p>Start where you are. Add more when you need it. Every pack is shared with your team and never expires.</p></div><div class="pricing-grid">${Object.entries(state.plans).map(([name, plan], index) => planCard(name, plan, index)).join('') || '<p>Loading plans…</p>'}<p class="pricing-disclaimer">Purchases currently add demo credits. No payment is collected.</p></div></section><section class="final-cta"><div class="site-container final-inner"><span class="eyebrow-line">GOOD THINGS START HERE</span><h2>Make space for<br><em>what’s next.</em></h2><p>Your team has somewhere to go. Let’s get moving.</p><button class="pill-button light large" data-route="${state.profile ? 'dashboard' : 'register'}">${state.profile ? 'Go to dashboard' : 'Create your workspace'} ${icon('arrowUp', 18)}</button><div class="cta-decoration">✳</div></div></section><footer class="marketing-footer site-container"><a href="#home" data-route="home">${logo()}</a><span>Better together, every day.</span><span>© ${new Date().getFullYear()} Atmos</span></footer></div>`;
+  return `
+    <div class="marketing atmos-new-landing">
+
+      ${marketingHeader()}
+
+      <!-- HERO -->
+      <section class="atmos-hero site-container">
+
+        <div class="atmos-hero-copy">
+
+          <div class="atmos-kicker reveal">
+            <span class="atmos-kicker-line"></span>
+            CARBON INTELLIGENCE FOR OPERATING TEAMS
+          </div>
+
+          <h1 class="atmos-hero-title reveal">
+            Measure what
+            <br>
+            your business
+            <br>
+            <span class="atmos-italic">leaves behind.</span>
+          </h1>
+
+          <p class="atmos-hero-description reveal">
+            Turn utility bills and operational evidence into a clear
+            emissions picture. Track CO₂e, identify hotspots, and
+            move from reporting to reduction.
+          </p>
+
+          <div class="atmos-hero-buttons reveal">
+
+            <button
+              class="pill-button dark large atmos-primary-button"
+              data-route="${state.profile ? 'dashboard' : 'register'}"
+            >
+              ${state.profile ? 'Open workspace' : 'Start measuring'}
+              ${icon('arrowUp', 18)}
+            </button>
+
+            <a
+              class="atmos-secondary-link"
+              href="#how-it-works"
+            >
+              Explore the workflow
+              ${icon('arrow', 17)}
+            </a>
+
+          </div>
+
+          <div class="atmos-hero-proof reveal">
+            ${icon('shield', 19)}
+            <div>
+              <strong>Evidence-led accounting</strong>
+              <span>Every estimate stays connected to its source document.</span>
+            </div>
+          </div>
+
+        </div>
+
+
+        <!-- VISUAL GLOBE -->
+        <div class="atmos-hero-visual">
+
+          <div class="atmos-globe-scene">
+
+            <div class="atmos-globe-orbit orbit-a"></div>
+            <div class="atmos-globe-orbit orbit-b"></div>
+            <div class="atmos-globe-orbit orbit-c"></div>
+
+            <div class="atmos-globe">
+
+              <div class="atmos-globe-grid"></div>
+
+              <div class="atmos-globe-land land-one"></div>
+              <div class="atmos-globe-land land-two"></div>
+              <div class="atmos-globe-land land-three"></div>
+              <div class="atmos-globe-land land-four"></div>
+
+              <div class="atmos-globe-shine"></div>
+
+            </div>
+
+            <div class="atmos-globe-dot"></div>
+
+            <div class="atmos-floating-card footprint-card">
+
+              <span class="atmos-card-label">
+                ESTIMATED FOOTPRINT
+              </span>
+
+              <div class="atmos-footprint-number">
+                12.8
+                <span>tCO₂e</span>
+              </div>
+
+              <div class="atmos-footprint-change">
+                <span class="atmos-status-dot"></span>
+                18% lower <span>than last period</span>
+              </div>
+
+            </div>
+
+
+            <div class="atmos-floating-card energy-card">
+
+              <div class="atmos-floating-icon">
+                ${icon('bolt', 18)}
+              </div>
+
+              <span>Electricity</span>
+
+              <strong>48%</strong>
+
+            </div>
+
+
+            <div class="atmos-floating-card transport-card">
+
+              <div class="atmos-floating-icon">
+                ${icon('layers', 18)}
+              </div>
+
+              <span>Transport</span>
+
+              <strong>27%</strong>
+
+            </div>
+
+
+            <div class="atmos-orbit-accent"></div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PROCESS STRIP -->
+      <section class="atmos-process-strip">
+
+        <div class="site-container atmos-process-inner">
+
+          <span class="atmos-process-label">
+            ONE AUDITABLE WORKFLOW
+          </span>
+
+          <div class="atmos-process-item">
+            Evidence
+          </div>
+
+          <span class="atmos-process-separator">●</span>
+
+          <div class="atmos-process-item">
+            Measurement
+          </div>
+
+          <span class="atmos-process-separator">●</span>
+
+          <div class="atmos-process-item">
+            Reduction
+          </div>
+
+          <span class="atmos-process-separator">●</span>
+
+          <div class="atmos-process-item">
+            Reporting
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- HOW IT WORKS -->
+      <section
+        class="atmos-workflow site-container"
+        id="how-it-works"
+      >
+
+        <div class="atmos-workflow-heading">
+
+          <div class="atmos-workflow-title">
+
+            <div class="atmos-kicker">
+              <span class="atmos-kicker-line"></span>
+              FROM DOCUMENT TO DECISION
+            </div>
+
+            <h2>
+              Your footprint,
+              <br>
+              <span class="atmos-italic">
+                without the fog.
+              </span>
+            </h2>
+
+          </div>
+
+          <p class="atmos-workflow-intro">
+            Atmos gives every team a practical path from raw
+            operational documents to reduction-ready carbon data.
+          </p>
+
+        </div>
+
+
+        <div class="atmos-workflow-grid">
+
+
+          <!-- CARD 1 -->
+          <article class="atmos-workflow-card">
+
+            <div class="atmos-workflow-top">
+
+              <span class="atmos-workflow-number">
+                01
+              </span>
+
+              <div class="atmos-workflow-icon atmos-icon-upload">
+                ${icon('upload', 25)}
+              </div>
+
+            </div>
+
+            <h3>
+              Collect
+              <br>
+              evidence.
+            </h3>
+
+            <p>
+              Upload electricity, fuel, travel, waste and other
+              operational bills into the right department.
+            </p>
+
+            <div class="atmos-card-decoration atmos-upload-decoration">
+
+              <div class="atmos-document">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div class="short"></div>
+              </div>
+
+              <div class="atmos-document document-back">
+                <div></div>
+                <div></div>
+                <div class="short"></div>
+              </div>
+
+              <div class="atmos-upload-circle">
+                ${icon('upload', 22)}
+              </div>
+
+            </div>
+
+            <span class="atmos-card-bottom-label">
+              SOURCE DOCUMENTS
+            </span>
+
+          </article>
+
+
+          <!-- CARD 2 -->
+          <article class="atmos-workflow-card">
+
+            <div class="atmos-workflow-top">
+
+              <span class="atmos-workflow-number">
+                02
+              </span>
+
+              <div class="atmos-workflow-icon atmos-icon-measure">
+                ${icon('spark', 25)}
+              </div>
+
+            </div>
+
+            <h3>
+              Calculate
+              <br>
+              CO₂e.
+            </h3>
+
+            <p>
+              AI-assisted analysis extracts activity data and
+              estimates emissions with visible confidence and
+              assumptions.
+            </p>
+
+            <div class="atmos-card-decoration atmos-measure-decoration">
+
+              <div class="atmos-measure-ring ring-one"></div>
+              <div class="atmos-measure-ring ring-two"></div>
+              <div class="atmos-measure-ring ring-three"></div>
+
+              <div class="atmos-measure-center">
+                CO₂
+              </div>
+
+              <div class="atmos-measure-node node-one"></div>
+              <div class="atmos-measure-node node-two"></div>
+              <div class="atmos-measure-node node-three"></div>
+
+            </div>
+
+            <span class="atmos-card-bottom-label">
+              CARBON INTELLIGENCE
+            </span>
+
+          </article>
+
+
+          <!-- CARD 3 -->
+          <article class="atmos-workflow-card">
+
+            <div class="atmos-workflow-top">
+
+              <span class="atmos-workflow-number">
+                03
+              </span>
+
+              <div class="atmos-workflow-icon atmos-icon-action">
+                ${icon('bolt', 25)}
+              </div>
+
+            </div>
+
+            <h3>
+              Act on
+              <br>
+              hotspots.
+            </h3>
+
+            <p>
+              Compare periods, understand category shares, and
+              focus reduction work where it has the greatest impact.
+            </p>
+
+            <div class="atmos-card-decoration atmos-action-decoration">
+
+              <div class="atmos-action-bars">
+
+                <div class="action-bar bar-one"></div>
+                <div class="action-bar bar-two"></div>
+                <div class="action-bar bar-three"></div>
+                <div class="action-bar bar-four"></div>
+                <div class="action-bar bar-five"></div>
+
+              </div>
+
+              <div class="atmos-action-arrow">
+                ${icon('arrowUp', 22)}
+              </div>
+
+            </div>
+
+            <span class="atmos-card-bottom-label">
+              REDUCTION STRATEGY
+            </span>
+
+          </article>
+
+
+        </div>
+
+      </section>
+
+
+      <!-- WHY ATMOS -->
+      <section
+        class="atmos-why-section"
+        id="why-atmos"
+      >
+
+        <div class="site-container atmos-why-inner">
+
+          <div class="atmos-why-copy">
+
+            <div class="atmos-kicker">
+              <span class="atmos-kicker-line"></span>
+              BUILT FOR CREDIBLE ACTION
+            </div>
+
+            <h2>
+              Carbon reporting
+              <br>
+              should create
+              <br>
+              <span class="atmos-italic">
+                momentum,
+              </span>
+              not
+              <br>
+              paperwork.
+            </h2>
+
+          </div>
+
+
+          <div class="atmos-why-list">
+
+            <article class="atmos-why-item">
+
+              <span class="atmos-why-number">
+                01
+              </span>
+
+              <div>
+                <h3>Traceable by design</h3>
+
+                <p>
+                  Source documents, estimates, and retired credits
+                  remain connected.
+                </p>
+              </div>
+
+            </article>
+
+
+            <article class="atmos-why-item">
+
+              <span class="atmos-why-number">
+                02
+              </span>
+
+              <div>
+                <h3>Clear across teams</h3>
+
+                <p>
+                  Department-level access keeps data ownership
+                  simple and accountable.
+                </p>
+              </div>
+
+            </article>
+
+
+            <article class="atmos-why-item">
+
+              <span class="atmos-why-number">
+                03
+              </span>
+
+              <div>
+                <h3>Useful beyond compliance</h3>
+
+                <p>
+                  Reduction suggestions turn reporting data
+                  into practical next steps.
+                </p>
+              </div>
+
+            </article>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- CARBON CREDIT STORY -->
+      <section class="atmos-offset-section">
+
+        <div class="site-container atmos-offset-inner">
+
+          <div class="atmos-offset-heading">
+
+            <div class="atmos-kicker">
+              <span class="atmos-kicker-line"></span>
+              ACCOUNT FOR RESIDUAL IMPACT
+            </div>
+
+            <h2>
+              Measure first.
+              <br>
+              Reduce next.
+              <br>
+              <span class="atmos-italic">
+                Offset responsibly.
+              </span>
+            </h2>
+
+          </div>
+
+
+          <div class="atmos-offset-content">
+
+            <div class="atmos-offset-art">
+
+              <div class="atmos-offset-orbit orbit-one"></div>
+              <div class="atmos-offset-orbit orbit-two"></div>
+
+              <div class="atmos-offset-core">
+                CO₂
+              </div>
+
+              <span class="atmos-offset-particle particle-one">
+                CO₂
+              </span>
+
+              <span class="atmos-offset-particle particle-two">
+                CO₂
+              </span>
+
+              <span class="atmos-offset-particle particle-three">
+                CO₂
+              </span>
+
+            </div>
+
+
+            <div class="atmos-offset-copy">
+
+              <p>
+                Carbon credits are retired against analyzed
+                emissions at one credit per tonne of CO₂e.
+                Your ledger records every purchase, transfer,
+                and retirement.
+              </p>
+
+              <button
+                class="pill-button dark"
+                data-route="${state.profile ? 'purchase' : 'register'}"
+              >
+                ${state.profile ? 'View your ledger' : 'Explore Atmos'}
+                ${icon('arrow', 17)}
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- PRICING -->
+      <section
+        class="pricing-section site-container"
+        id="pricing"
+      >
+
+        <div class="pricing-heading">
+
+          <div>
+
+            <div class="atmos-kicker">
+              <span class="atmos-kicker-line"></span>
+              SIMPLE BY DESIGN
+            </div>
+
+            <h2>
+              Choose your scale.
+              <br>
+              <span class="atmos-italic">
+                Keep your impact moving.
+              </span>
+            </h2>
+
+          </div>
+
+          <p>
+            Start with what you need. Every credit pack is designed
+            to support your team's carbon accounting workflow.
+          </p>
+
+        </div>
+
+        <div class="pricing-grid">
+
+          ${
+            Object.entries(state.plans)
+              .map(([name, plan], index) => planCard(name, plan, index))
+              .join('')
+            || '<p>Loading plans…</p>'
+          }
+
+          <p class="pricing-disclaimer">
+            Purchases currently add demo credits. No payment is collected.
+          </p>
+
+        </div>
+
+      </section>
+
+
+      <!-- FINAL CTA -->
+      <section class="atmos-final-cta">
+
+        <div class="site-container atmos-final-inner">
+
+          <div class="atmos-final-star">
+            ✳
+          </div>
+
+          <div class="atmos-kicker">
+            THE NEXT STEP STARTS WITH DATA
+          </div>
+
+          <h2>
+            Clarity today.
+            <br>
+            <span class="atmos-italic">
+              A lighter tomorrow.
+            </span>
+          </h2>
+
+          <p>
+            Bring your operational data together and make
+            carbon reduction a practical part of how your
+            organisation works.
+          </p>
+
+          <button
+            class="pill-button light large"
+            data-route="${state.profile ? 'dashboard' : 'register'}"
+          >
+            ${state.profile ? 'Open your workspace' : 'Create your workspace'}
+            ${icon('arrowUp', 18)}
+          </button>
+
+        </div>
+
+      </section>
+
+
+      <!-- FOOTER -->
+      <footer class="marketing-footer site-container atmos-footer">
+
+        <a href="#home" data-route="home">
+          ${logo()}
+        </a>
+
+        <span>
+          Measure · Reduce · Report
+        </span>
+
+        <span>
+          © ${new Date().getFullYear()} Atmos
+        </span>
+
+      </footer>
+
+    </div>
+  `;
 }
 
 function authPageWithDepartment() {
@@ -360,52 +1008,585 @@ function carbonLanding() {
           </div>
           <div class="carbon-proof"><span>${icon('shield', 18)}</span><p><strong>Evidence-led accounting</strong> Every estimate stays connected to its source document.</p></div>
         </div>
-        <div class="carbon-hero-visual" aria-label="Animated carbon globe with floating emissions indicators">
-          <div class="globe-stage">
-            <div class="globe-orbit orbit-a"><span class="orbit-node"></span></div>
-            <div class="globe-orbit orbit-b"><span class="orbit-node"></span></div>
-            <div class="globe-orbit orbit-c"></div>
-            <div class="carbon-globe"><div class="globe-shine"></div><div class="globe-land land-one"></div><div class="globe-land land-two"></div><div class="globe-land land-three"></div><div class="globe-grid"></div><div class="globe-core-mark">✳</div></div>
-            <div class="co2-bubble bubble-one"><span>CO₂</span><small>Electricity</small></div>
-            <div class="co2-bubble bubble-two"><span>CO₂</span><small>Transport</small></div>
-            <div class="co2-bubble bubble-three"><span>CO₂</span><small>Operations</small></div>
-            <div class="co2-bubble bubble-four"><span>CO₂</span><small>Waste</small></div>
-            <div class="carbon-score"><span>ESTIMATED FOOTPRINT</span><strong>12.8<small>t CO₂e</small></strong><div><i></i><b>18% lower</b> than last period</div></div>
-            <div class="source-chip source-chip-one">${icon('bolt', 16)} Electricity <b>48%</b></div>
-            <div class="source-chip source-chip-two">${icon('cloud', 16)} Transport <b>27%</b></div>
-            <div class="orbit-leaf">${icon('leaf', 34)}</div>
-          </div>
-        </div>
+       <div class="carbon-hero-visual" aria-label="Animated carbon globe with floating emissions indicators">
+  <div class="globe-stage">
+
+    <!-- Atmospheric glow -->
+    <div class="globe-atmosphere"></div>
+
+    <!-- Orbital rings -->
+    <div class="globe-orbit orbit-a">
+      <span class="orbit-node"></span>
+    </div>
+
+    <div class="globe-orbit orbit-b">
+      <span class="orbit-node orbit-node-two"></span>
+    </div>
+
+    <div class="globe-orbit orbit-c"></div>
+
+    <div class="globe-orbit orbit-d">
+      <span class="orbit-node orbit-node-three"></span>
+    </div>
+
+    <!-- Globe -->
+    <div class="carbon-globe">
+
+      <div class="globe-shine"></div>
+
+      <div class="globe-land land-one"></div>
+      <div class="globe-land land-two"></div>
+      <div class="globe-land land-three"></div>
+
+      <div class="globe-grid"></div>
+
+      <div class="globe-3d-highlight"></div>
+
+      <div class="globe-core-mark">✳</div>
+
+    </div>
+
+    <!-- Floating carbon indicators -->
+    <div class="co2-bubble bubble-one">
+      <span>CO₂</span>
+      <small>Electricity</small>
+    </div>
+
+    <div class="co2-bubble bubble-two">
+      <span>CO₂</span>
+      <small>Transport</small>
+    </div>
+
+    <div class="co2-bubble bubble-three">
+      <span>CO₂</span>
+      <small>Operations</small>
+    </div>
+
+    <div class="co2-bubble bubble-four">
+      <span>CO₂</span>
+      <small>Waste</small>
+    </div>
+
+    <!-- Carbon dashboard floating card -->
+    <div class="carbon-score">
+      <span>ESTIMATED FOOTPRINT</span>
+
+      <strong>
+        12.8
+        <small>t CO₂e</small>
+      </strong>
+
+      <div>
+        <i></i>
+        <b>18% lower</b> than last period
+      </div>
+    </div>
+
+    <!-- Data chips -->
+    <div class="source-chip source-chip-one">
+      ${icon('bolt', 16)}
+      Electricity
+      <b>48%</b>
+    </div>
+
+    <div class="source-chip source-chip-two">
+      ${icon('cloud', 16)}
+      Transport
+      <b>27%</b>
+    </div>
+
+    <div class="orbit-leaf">
+      ${icon('leaf', 34)}
+    </div>
+
+    <!-- Small floating data particles -->
+    <div class="globe-particle particle-one"></div>
+    <div class="globe-particle particle-two"></div>
+    <div class="globe-particle particle-three"></div>
+
+  </div>
+</div>
       </section>
       <section class="carbon-metrics"><div class="site-container"><span>ONE AUDITABLE WORKFLOW</span><strong>Evidence</strong><i></i><strong>Measurement</strong><i></i><strong>Reduction</strong><i></i><strong>Reporting</strong></div></section>
-      <section id="how-it-works" class="carbon-workflow site-container">
-        
-<div class="carbon-section-head">
-  <span class="carbon-kicker">
-    <i></i> From raw evidence to real decisions
-  </span>
+     <section id="how-it-works" class="carbon-workflow site-container">
 
-  <h2>
-    Know your impact.<br>
-    <em>Change what matters.</em>
-  </h2>
+  <div class="workflow-new-heading">
+    <div>
+      <span class="carbon-kicker">
+        <i></i> THE ATMOS SYSTEM
+      </span>
 
-  <p>
-    Atmos turns everyday operational documents into a reliable carbon picture.
-    See where emissions come from, understand the numbers, and give every team
-    a clear next step.
-  </p>
-</div>
-        <div class="workflow-grid">
-          <article><span>01</span><div class="workflow-icon">${icon('upload', 25)}</div><h3>Collect evidence</h3><p>Upload electricity, fuel, travel, waste, and other operational bills into the correct department.</p></article>
-          <article><span>02</span><div class="workflow-icon">${icon('spark', 25)}</div><h3>Calculate CO₂e</h3><p>AI-assisted analysis extracts activity data and estimates emissions with visible confidence and assumptions.</p></article>
-          <article><span>03</span><div class="workflow-icon">${icon('target', 25)}</div><h3>Act on hotspots</h3><p>Compare periods, understand category shares, and focus reduction work where it has the greatest impact.</p></article>
+      <h2>
+        From evidence<br>
+        to <em>environmental intelligence.</em>
+      </h2>
+    </div>
+
+    <p>
+      A connected system that transforms everyday operational
+      records into measurable emissions, actionable insights
+      and informed decisions.
+    </p>
+  </div>
+
+  <div class="workflow-visual">
+
+    <div class="workflow-rail">
+      <div class="workflow-rail-progress"></div>
+    </div>
+
+    <div class="workflow-new-grid">
+
+      <!-- STEP 1 -->
+
+      <article class="workflow-new-item">
+
+        <div class="workflow-new-top">
+          <span class="workflow-new-number">01</span>
+          <span class="workflow-new-label">INPUT</span>
         </div>
-      </section>
-      <section id="why-atmos" class="carbon-manifesto"><div class="site-container manifesto-inner"><div><span class="carbon-kicker light"><i></i> Built for credible action</span><h2>Carbon reporting should create <em>momentum,</em> not paperwork.</h2></div><div class="manifesto-points"><p><b>01</b><span><strong>Traceable by design</strong>Source documents, estimates, and retired credits remain connected.</span></p><p><b>02</b><span><strong>Clear across teams</strong>Department-level access keeps data ownership simple and accountable.</span></p><p><b>03</b><span><strong>Useful beyond compliance</strong>Reduction suggestions turn reporting data into practical next steps.</span></p></div></div></section>
-      <section id="pricing" class="carbon-credits-section site-container"><div><span class="carbon-kicker"><i></i> Account for residual impact</span><h2>Measure first.<br>Reduce next.<br><em>Offset responsibly.</em></h2></div><div class="credit-callout"><div class="credit-ring">${icon('leaf', 44)}</div><p>Carbon credits are retired against analyzed emissions at one credit per tonne of CO₂e. Your ledger records every purchase, transfer, and retirement.</p><button class="pill-button dark" data-route="${signedInRoute}">${state.profile ? 'View your ledger' : 'Create your workspace'} ${icon('arrow', 17)}</button></div></section>
+
+        <div class="workflow-new-graphic graphic-documents">
+
+          <div class="doc-back"></div>
+
+          <div class="doc-front">
+
+            <div class="doc-line doc-line-long"></div>
+            <div class="doc-line"></div>
+            <div class="doc-line doc-line-short"></div>
+
+            <div class="doc-data-row">
+              <span></span>
+              <b>£1,248.90</b>
+            </div>
+
+            <div class="doc-data-row">
+              <span></span>
+              <b>846 kWh</b>
+            </div>
+
+          </div>
+
+          <div class="doc-float-chip">
+            <span class="doc-chip-dot"></span>
+            DOCUMENT RECEIVED
+          </div>
+
+        </div>
+
+        <div class="workflow-new-content">
+
+          <span class="workflow-new-kicker">
+            EVIDENCE COLLECTION
+          </span>
+
+          <h3>
+            Every source.<br>
+            Connected.
+          </h3>
+
+          <p>
+            Bring electricity bills, fuel records and operational
+            documents into one organised evidence system.
+          </p>
+
+          <div class="workflow-new-feature">
+            <span class="workflow-feature-mark">+</span>
+            <div>
+              <strong>Centralised records</strong>
+              <small>Department-organised evidence</small>
+            </div>
+          </div>
+
+          <div class="workflow-new-feature">
+            <span class="workflow-feature-mark">+</span>
+            <div>
+              <strong>Document validation</strong>
+              <small>Reliable inputs for analysis</small>
+            </div>
+          </div>
+
+        </div>
+
+      </article>
+
+
+      <!-- STEP 2 -->
+
+      <article class="workflow-new-item">
+
+        <div class="workflow-new-top">
+          <span class="workflow-new-number">02</span>
+          <span class="workflow-new-label">PROCESS</span>
+        </div>
+
+        <div class="workflow-new-graphic graphic-analysis">
+
+          <div class="analysis-ring analysis-ring-one"></div>
+          <div class="analysis-ring analysis-ring-two"></div>
+
+          <div class="analysis-core">
+            <span>CO₂</span>
+            <small>ANALYSIS</small>
+          </div>
+
+          <div class="analysis-particle particle-one"></div>
+          <div class="analysis-particle particle-two"></div>
+          <div class="analysis-particle particle-three"></div>
+          <div class="analysis-particle particle-four"></div>
+
+          <div class="analysis-tag tag-electric">
+            <span></span> ELECTRICITY
+          </div>
+
+          <div class="analysis-tag tag-fuel">
+            <span></span> FUEL
+          </div>
+
+        </div>
+
+        <div class="workflow-new-content">
+
+          <span class="workflow-new-kicker">
+            AI-ASSISTED MEASUREMENT
+          </span>
+
+          <h3>
+            Raw data.<br>
+            Clear numbers.
+          </h3>
+
+          <p>
+            Extract activity information, calculate emissions
+            and make assumptions visible for review.
+          </p>
+
+          <div class="workflow-new-feature">
+            <span class="workflow-feature-mark">+</span>
+            <div>
+              <strong>Automated extraction</strong>
+              <small>Turn documents into data</small>
+            </div>
+          </div>
+
+          <div class="workflow-new-feature">
+            <span class="workflow-feature-mark">+</span>
+            <div>
+              <strong>Emission estimation</strong>
+              <small>Understand your CO₂e footprint</small>
+            </div>
+          </div>
+
+        </div>
+
+      </article>
+
+
+      <!-- STEP 3 -->
+
+      <article class="workflow-new-item">
+
+        <div class="workflow-new-top">
+          <span class="workflow-new-number">03</span>
+          <span class="workflow-new-label">INSIGHT</span>
+        </div>
+
+        <div class="workflow-new-graphic graphic-insights">
+
+          <div class="insight-panel">
+
+            <div class="insight-panel-header">
+              <span>EMISSION SOURCES</span>
+              <span>↗</span>
+            </div>
+
+            <div class="insight-chart">
+
+              <div class="insight-chart-bar bar-one">
+                <span>48%</span>
+              </div>
+
+              <div class="insight-chart-bar bar-two">
+                <span>27%</span>
+              </div>
+
+              <div class="insight-chart-bar bar-three">
+                <span>16%</span>
+              </div>
+
+              <div class="insight-chart-bar bar-four">
+                <span>9%</span>
+              </div>
+
+            </div>
+
+            <div class="insight-chart-labels">
+              <span>ELEC</span>
+              <span>FUEL</span>
+              <span>TRAVEL</span>
+              <span>OTHER</span>
+            </div>
+
+          </div>
+
+          <div class="insight-float">
+            <span>TOP SOURCE</span>
+            <strong>Electricity</strong>
+            <small>Needs attention</small>
+          </div>
+
+        </div>
+
+        <div class="workflow-new-content">
+
+          <span class="workflow-new-kicker">
+            CARBON INTELLIGENCE
+          </span>
+
+          <h3>
+            See where<br>
+            impact lives.
+          </h3>
+
+          <p>
+            Understand department performance, emission categories,
+            trends and the sources driving your footprint.
+          </p>
+
+          <div class="workflow-new-feature">
+            <span class="workflow-feature-mark">+</span>
+            <div>
+              <strong>Category breakdowns</strong>
+              <small>See your largest sources</small>
+            </div>
+          </div>
+
+          <div class="workflow-new-feature">
+            <span class="workflow-feature-mark">+</span>
+            <div>
+              <strong>Reporting trends</strong>
+              <small>Compare across periods</small>
+            </div>
+          </div>
+
+        </div>
+
+      </article>
+
+
+      <!-- STEP 4 -->
+
+      <article class="workflow-new-item">
+
+        <div class="workflow-new-top">
+          <span class="workflow-new-number">04</span>
+          <span class="workflow-new-label">ACTION</span>
+        </div>
+
+        <div class="workflow-new-graphic graphic-action">
+
+          <div class="action-target target-outer"></div>
+          <div class="action-target target-middle"></div>
+          <div class="action-target target-inner"></div>
+
+          <div class="action-arrow">
+            <svg viewBox="0 0 120 120" fill="none">
+              <path
+                d="M24 88L92 28M55 28H92V65"
+                stroke="currentColor"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+
+          <div class="action-chip">
+            <span></span>
+            REDUCTION PRIORITY
+          </div>
+
+        </div>
+
+        <div class="workflow-new-content">
+
+          <span class="workflow-new-kicker">
+            REDUCTION & REPORTING
+          </span>
+
+          <h3>
+            Insight into<br>
+            action.
+          </h3>
+
+          <p>
+            Identify hotspots, prioritise reduction opportunities
+            and track progress with evidence behind every decision.
+          </p>
+
+          <div class="workflow-new-feature">
+            <span class="workflow-feature-mark">+</span>
+            <div>
+              <strong>Action priorities</strong>
+              <small>Focus where it matters</small>
+            </div>
+          </div>
+
+          <div class="workflow-new-feature">
+            <span class="workflow-feature-mark">+</span>
+            <div>
+              <strong>Evidence-led reporting</strong>
+              <small>Track measurable progress</small>
+            </div>
+          </div>
+
+        </div>
+
+      </article>
+
+    </div>
+
+  </div>
+
+  <div class="workflow-new-bottom">
+
+    <div class="workflow-bottom-left">
+      <span class="workflow-bottom-symbol">✳</span>
+
+      <div>
+        <strong>Measure with clarity.</strong>
+        <p>Move forward with evidence, not guesswork.</p>
+      </div>
+    </div>
+
+    <a href="#why-atmos">
+      Discover Atmos <span>↗</span>
+    </a>
+
+  </div>
+
+</section>      <section id="why-atmos" class="carbon-manifesto"><div class="site-container manifesto-inner"><div><span class="carbon-kicker light"><i></i> Built for credible action</span><h2>Carbon reporting should create <em>momentum,</em> not paperwork.</h2></div><div class="manifesto-points"><p><b>01</b><span><strong>Traceable by design</strong>Source documents, estimates, and retired credits remain connected.</span></p><p><b>02</b><span><strong>Clear across teams</strong>Department-level access keeps data ownership simple and accountable.</span></p><p><b>03</b><span><strong>Useful beyond compliance</strong>Reduction suggestions turn reporting data into practical next steps.</span></p></div></div></section>
+<section id="pricing" class="carbon-credits-section site-container">
+  <div class="credits-editorial">
+    <span class="carbon-kicker">
+      <i></i> ACCOUNT FOR RESIDUAL IMPACT
+    </span>
+
+    <h2>
+      Measure first.<br>
+      Reduce next.<br>
+      <em>Offset responsibly.</em>
+    </h2>
+
+    <p>
+      Reduction comes first. When emissions remain, transparent
+      carbon-credit accounting helps you document the next step
+      with confidence.
+    </p>
+
+    <button class="pill-button dark" data-route="${signedInRoute}">
+      ${state.profile ? 'View your ledger' : 'Create your workspace'}
+      ${icon('arrow', 17)}
+    </button>
+  </div>
+
+  <div class="credits-visual-panel">
+    <div class="credits-visual-orbit credits-orbit-one"></div>
+    <div class="credits-visual-orbit credits-orbit-two"></div>
+
+    <div class="credits-visual-main">
+      <div class="credits-visual-glow"></div>
+
+      <div class="credits-visual-core">
+        <span class="credits-core-top">ATMOS</span>
+        <strong>CO₂e</strong>
+        <span class="credits-core-bottom">ACCOUNTABILITY</span>
+      </div>
+
+      <div class="credits-mini-card credits-mini-top">
+        <span class="credits-mini-dot"></span>
+        <div>
+          <small>PRIORITY</small>
+          <strong>Reduce first</strong>
+        </div>
+      </div>
+
+      <div class="credits-mini-card credits-mini-bottom">
+        <span class="credits-mini-dot"></span>
+        <div>
+          <small>REMAINING IMPACT</small>
+          <strong>Account responsibly</strong>
+        </div>
+      </div>
+
+      <span class="credits-star credits-star-one">✳</span>
+      <span class="credits-star credits-star-two">✦</span>
+      <span class="credits-star credits-star-three">✳</span>
+    </div>
+  </div>
+</section>
     </main>
-    <footer class="carbon-footer site-container">${logo()}<p>Measure clearly. Reduce deliberately.</p><span>ATMOS · CARBON INTELLIGENCE</span></footer>
+<footer class="carbon-footer carbon-footer-enhanced">
+  <div class="footer-top">
+
+    <div class="footer-brand-block">
+      <a href="#home" data-route="home">
+        ${logo()}
+      </a>
+
+      <p>
+        Clarity for your footprint.<br>
+        Confidence for your next move.
+      </p>
+    </div>
+
+    <div class="footer-navigation">
+
+      <div class="footer-column">
+        <span>EXPLORE</span>
+        <a href="#how-it-works">How it works</a>
+        <a href="#why-atmos">Why Atmos</a>
+        <a href="#pricing">Carbon accounting</a>
+      </div>
+
+      <div class="footer-column">
+        <span>YOUR WORKSPACE</span>
+        <button data-route="login">Log in</button>
+        <button data-route="register">Get started</button>
+      </div>
+
+    </div>
+
+    <div class="footer-message">
+      <span class="footer-message-label">
+        A SMALLER FOOTPRINT.
+      </span>
+
+      <h3>
+        Better decisions.<br>
+        <em>Better tomorrow.</em>
+      </h3>
+
+      <span class="footer-message-mark">✳</span>
+    </div>
+
+  </div>
+
+  <div class="footer-bottom">
+    <a href="#home" data-route="home">
+      ${logo()}
+    </a>
+
+    <span>
+      © ${new Date().getFullYear()} Atmos
+    </span>
+
+    <span class="footer-bottom-note">
+      MEASURE · REDUCE · REPORT
+    </span>
+  </div>
+</footer>
   </div>`;
 }
 
@@ -466,14 +1647,69 @@ function render() {
     departments: admin() ? departments : dashboard,
   }[state.route]();
   app.innerHTML = state.profile && !['home', 'login', 'register'].includes(state.route) ? carbonShell(content) : `${content}${toast()}`;
-  if (state.route === 'home') {
-    const revealItems = app.querySelectorAll('.carbon-workflow, .carbon-section-head, .workflow-grid article, .carbon-manifesto, .manifesto-points p, .carbon-credits-section, .carbon-footer');
-    revealItems.forEach((el, index) => { el.classList.add('scroll-reveal'); el.style.setProperty('--reveal-delay', `${Math.min(index % 4, 3) * 90}ms`); });
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(entries => entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); } }), { threshold: 0.14 });
-      revealItems.forEach(el => observer.observe(el));
-    } else revealItems.forEach(el => el.classList.add('is-visible'));
+if (state.route === 'home') {
+
+  const revealItems = app.querySelectorAll(
+    '.carbon-hero-copy, ' +
+    '.carbon-hero-visual, ' +
+    '.carbon-metrics, ' +
+    '.carbon-workflow, ' +
+    '.workflow-new-heading, ' +
+    '.workflow-new-item, ' +
+    '.workflow-new-bottom, ' +
+    '.carbon-manifesto, ' +
+    '.manifesto-points p, ' +
+    '.carbon-credits-section, ' +
+    '.carbon-footer'
+  );
+
+  revealItems.forEach((el, index) => {
+
+    el.classList.add('scroll-reveal');
+
+    el.style.setProperty(
+      '--reveal-delay',
+      `${Math.min(index % 4, 3) * 100}ms`
+    );
+
+  });
+
+  if ('IntersectionObserver' in window) {
+
+    const observer = new IntersectionObserver(
+
+      entries => {
+
+        entries.forEach(entry => {
+
+          if (entry.isIntersecting) {
+
+            entry.target.classList.add('is-visible');
+
+            observer.unobserve(entry.target);
+
+          }
+
+        });
+
+      },
+
+      {
+        threshold: 0.12,
+        rootMargin: '0px 0px -40px 0px'
+      }
+
+    );
+
+    revealItems.forEach(el => observer.observe(el));
+
+  } else {
+
+    revealItems.forEach(el => el.classList.add('is-visible'));
+
   }
+
+}
   if (complianceManager()) app.querySelector('.sidebar-help button')?.remove();
   const source = app.querySelector('[name="from_department_id"]');
   const destination = app.querySelector('[name="to_department_id"]');
