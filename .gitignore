@@ -1,6 +1,47 @@
+# Secrets and local configuration
 .env
+.env.*
+!.env.example
+*.local
+
+# Python
 .venv/
+venv/
+env/
 __pycache__/
-.pytest_cache/
 *.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# JavaScript and frontend build output
+node_modules/
+dist/
+build/
+coverage/
+.vite/
+.vite-temp/
+*.tsbuildinfo
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+
+# Local tooling and editor state
+.opencode/
 opencode.json
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Operating-system and archive metadata
+.DS_Store
+._*
+__MACOSX/
+Thumbs.db

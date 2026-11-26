@@ -1,134 +1,207 @@
-# Atmos — team accounts and prepaid credits
+# Atmos
 
-FastAPI application with public sign-up, department-scoped account management, and shared prepaid credits. Anyone can create an owner account without a department. When ready, the owner creates their first department and can add others. Admins can add users only as `data_officer` or `compliance_manager`; they cannot create another admin or a general employee. Only admins can buy credits. Owners can transfer credits between departments they manage. Staff can log in and use their department's credits.
+Atmos is a climate-accounting workspace for teams. It lets organizations upload operational bills, estimate carbon emissions from the bill evidence, manage prepaid analysis credits, and generate department reports.
 
-## Start
+The application consists of a FastAPI backend, a Vite frontend, and a PostgreSQL database. Production Docker builds serve both the API and the compiled frontend from one container.
 
-```bash
-python3 -m pip install -r requirements.txt
-python3 -m uvicorn app.main:app --reload --reload-dir app
-```
+## What it does
 
-The existing `.env` supplies `NEON_DATABASE_URL`. Database tables are created or upgraded on startup. No bootstrap admin is required: start by registering an account in the application or with `POST /auth/register`. Optionally, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` can bootstrap the first admin for a fresh database.
+- **Account and team management** — public owner registration, login sessions, departments, and role-based team access.
+- **Bill management** — upload and retrieve PDF bills (up to 10 MB), optionally import a PDF through Google Drive Picker.
+- **Emissions analysis** — admins and Compliance Managers can analyze uploaded bills with Azure AI Foundry and view estimated CO2e, category, confidence, and reduction suggestions.
+- **Prepaid credits** — purchase credit packs through Razorpay, verify payments server-side, spend credits on analysis, and transfer credits between departments.
+- **Reports** — download or email a department PDF summary of bills, emissions, credits, and verified payments.
+- **Safe in-app help** — a constrained, role-aware helper for product guidance; it cannot access data, perform actions, or process secrets.
 
-## Deploy on Render with Docker
+## Roles
 
-The root `Dockerfile` builds the Vite frontend and serves it from the FastAPI
-container. The browser and API therefore use one domain in production: frontend
-requests to `/api/...` are served by the same application, with no Vite proxy
-required. The container listens on Render's `PORT` and exposes `GET /health`
-for service health checks.
+| Role | Access |
+| --- | --- |
+| `admin` | Creates and manages owned departments, members, credit purchases/transfers, bills, and reports. Public sign-up creates an admin. |
+| `data_officer` | Uploads and views bills for their department. |
+| `compliance_manager` | Views emissions analytics and generates reports for their department. |
 
-1. Push the repository and create a Render **Web Service** using Docker. If
-   deploying from this `project/` directory, Render can use `render.yaml`; if
-   the repository root is above it, set the service root directory to `project`.
-2. Set the Dockerfile path to `./Dockerfile` and leave the start command empty.
-3. Add the required `NEON_DATABASE_URL` as a Render secret. Add optional SMTP,
-   Google Drive, Razorpay, and Azure variables only for features you enable.
-4. Deploy. The database schema is initialized on startup; do not use a local
-   `.env` file in the image.
-
-For Google Drive in production, add the exact deployed origin to the OAuth
-client's authorized JavaScript origins, for example:
+## Project structure
 
 ```text
-https://your-service.onrender.com
+project/
+├── app/                 # FastAPI routes, database models, integrations
+├── frontend/            # Vite single-page application
+├── tests/               # Backend workflow tests
+├── Dockerfile           # Production frontend build + FastAPI runtime image
+├── compose.yaml         # Local Docker Compose configuration
+└── render.yaml          # Render deployment blueprint
 ```
 
-Do not add a trailing slash. Add the same production origin to any Google OAuth
-consent-screen settings required by your project.
+## Prerequisites
 
-### Run locally with Docker Desktop
+- Python 3.12+
+- Node.js 22+ and npm (for frontend development)
+- PostgreSQL database, such as Neon
+- Docker Desktop (optional, for the production-like local setup)
 
-Keep the local `.env` file in `project/` (it is excluded from image builds),
-then run:
+## Configure environment variables
+
+Create `project/.env`. It is intentionally ignored by Git. At minimum, configure a PostgreSQL connection string:
+
+```dotenv
+NEON_DATABASE_URL=postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require
+```
+
+`DATABASE_URL` is also accepted as an alternative name. Atmos initializes/upgrades its tables when the API starts.
+
+### Optional integrations
+
+| Feature | Variables |
+| --- | --- |
+| Razorpay credit checkout | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` |
+| Azure AI Foundry bill analysis | `AZURE_AI_PROJECT_ENDPOINT`, `AZURE_AI_API_KEY`, `AZURE_AI_MODEL` |
+| Google Drive Picker | `GOOGLE_DRIVE_CLIENT_ID`, `GOOGLE_DRIVE_API_KEY`, optionally `GOOGLE_DRIVE_APP_ID` |
+| Welcome emails, receipts, emailed reports | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_USE_TLS`, `SMTP_USE_SSL` |
+
+Never commit `.env`, API keys, database passwords, payment secrets, or SMTP credentials.
+
+## Run locally
+
+### Backend
+
+From `project/`:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --reload-dir app
+```
+
+The API runs at `http://127.0.0.1:8000`. Health check:
+
+```bash
+curl http://127.0.0.1:8000/health
+```
+
+### Frontend development server
+
+In a second terminal:
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. Vite forwards browser requests from `/api/*` to `http://127.0.0.1:8000/*`.
+
+### Run the full production-style stack with Docker
+
+From `project/`:
 
 ```bash
 docker compose up --build
 ```
 
-This loads `NEON_DATABASE_URL` and any enabled integration variables from
-`project/.env`, publishes the app at `http://localhost:8000`, and avoids having
-to enter each environment variable manually in Docker Desktop. Stop it with
-`docker compose down`.
+Open `http://localhost:8000`. The Docker image builds the frontend and FastAPI serves it along with the API on the same domain. Stop it with:
 
-## Account workflow
-
-1. `POST /auth/register` with `{"name":"Owner","email":"owner@example.com","password":"a-strong-password"}` creates an owner without a department.
-2. `POST /auth/login` with email and password returns a bearer token. Existing accounts of any role can still log in.
-3. `POST /admin/departments` with `{"name":"Sales"}` creates a department with an empty credit balance. The first department becomes the owner's home department. `GET /admin/departments` lists departments the admin can manage. Two unrelated owners can both have a department named Sales; names must only be unique within the same owner's account (case-insensitive).
-4. `POST /admin/users` with `{"name":"Data Officer","email":"officer@example.com","password":"a-strong-password","role":"data_officer","department_id":2}` adds a user to an authorized department. The required `role` must be `data_officer` or `compliance_manager`. Omit `department_id` to use the admin's own department. `GET /admin/users?department_id=2` lists users in an authorized department. Only admins can create users; these staff roles have regular department access.
-
-The department IDs in these examples are illustrative. Owners can assign users to any department they own. Existing invited department admins can manage users in their own department, but newly invited users cannot be made admins. Public sign-up does not create or join a department; an admin creates staff accounts in their chosen department.
-
-## Credit endpoints
-
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| GET | `/credits/plans` | Public | View available packs |
-| GET | `/credits/balance` | Logged-in user | View own department balance; a managing admin can use `?department_id=2` |
-| POST | `/admin/credits/purchases` | Admin | Create a Razorpay order for a pack: `{"plan":"starter","department_id":2}`; omit department ID for own department |
-| POST | `/admin/credits/purchases/verify` | Admin | Verify Razorpay's checkout response and add the paid credits exactly once |
-| POST | `/admin/credits/transfers` | Admin managing both departments | Move credits between teams: `{"from_department_id":1,"to_department_id":2,"credits":25}` |
-| POST | `/credits/spend` | Logged-in user | Spend from own department with `{"credits":5}`; insufficient balance returns 409 |
-| GET | `/admin/credits/transactions` | Admin | View department ledger; optionally specify an owned `?department_id=2` |
-
-Plans defined in `app/credits.py` are **starter** (100 credits, ₹1), **growth** (500 credits, ₹10) and **scale** (2,000 credits, ₹20). Prices are denominated in INR and stored in the smallest currency unit. The backend creates the order at the catalog price, verifies Razorpay's HMAC signature and captured payment details, and applies each payment once. Credits are shared by users in the chosen department and do not expire. Transfers deduct and add credits atomically, with a ledger entry in each department.
-
-Configure Razorpay test credentials in the backend `.env`; the secret is never sent to the browser:
-
-```dotenv
-RAZORPAY_KEY_ID=rzp_test_...
-RAZORPAY_KEY_SECRET=...
+```bash
+docker compose down
 ```
 
-The existing `Test_API_Key` and `Test_Key_Secret` names are also supported.
+## Typical user workflow
 
-`GET /users/me` shows your role and department. `POST /auth/logout` revokes your current token. Only public signup creates a new owner with the `admin` role; existing department admins remain active.
+1. Register an owner account from the app or `POST /auth/register`.
+2. Sign in and create a department.
+3. Invite a **Data Officer** to upload source PDF bills and/or a **Compliance Manager** to review emissions.
+4. Purchase a credit pack (admin only) and complete Razorpay checkout.
+5. Upload bills, analyze pending bills, and review estimated emissions and suggestions.
+6. Download or email the department report.
 
-## Emissions analysis
+## API overview
 
-Compliance managers and admins can open the Emissions dashboard to analyze stored PDF bills, view monthly and source graphs, and review reduction suggestions. Configure the Foundry deployment in the backend `.env` without exposing credentials to the frontend:
+The browser uses `/api/...` in production. FastAPI accepts the equivalent routes without `/api` as well.
+
+| Area | Key endpoints |
+| --- | --- |
+| Health | `GET /health` |
+| Authentication | `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /users/me` |
+| Departments and team | `POST/GET /admin/departments`, `POST/GET /admin/users` |
+| Credits | `GET /credits/plans`, `GET /credits/balance`, `POST /admin/credits/purchases`, `POST /admin/credits/purchases/verify`, `POST /credits/spend`, `POST /admin/credits/transfers` |
+| Bills | `GET/POST /bills`, `GET /bills/{bill_id}/file`, `GET /bills/google-drive/config` |
+| Emissions | `GET /emissions`, `POST /emissions/analyze` |
+| Reports | `GET /reports/download`, `POST /reports/email` |
+| Help | `POST /support/chat` |
+
+Authenticated endpoints require the bearer token returned by `/auth/login`:
+
+```http
+Authorization: Bearer <access_token>
+```
+
+## Payments and credits
+
+The current catalog is configured in `app/credits.py`:
+
+- `starter`: 100 credits for ₹1
+- `growth`: 500 credits for ₹10
+- `scale`: 2,000 credits for ₹20
+
+Razorpay orders are created at the server-defined price. The backend verifies the checkout signature and payment before adding credits, preventing client-side price manipulation and duplicate crediting.
+
+## Google Drive setup
+
+To enable **Add from Google Drive**:
+
+1. Enable **Google Drive API** and **Google Picker API** in Google Cloud.
+2. Create a web OAuth client and browser API key.
+3. Add local and production frontend origins to the OAuth client's **Authorized JavaScript origins**. Do not include trailing slashes.
+4. Set `GOOGLE_DRIVE_CLIENT_ID` and `GOOGLE_DRIVE_API_KEY` in `.env` or your host's environment variables.
+
+Atmos requests a short-lived, read-only token in the browser for the selected file. It does not store a user's Google token.
+
+## Azure AI Foundry setup
+
+Set these server-side values to enable bill analysis:
 
 ```dotenv
-AZURE_AI_PROJECT_ENDPOINT=https://your-resource.services.ai.azure.com/api/projects/your-project
+AZURE_AI_PROJECT_ENDPOINT=https://YOUR-RESOURCE.services.ai.azure.com/api/projects/YOUR-PROJECT
 AZURE_AI_API_KEY=your-api-key
-AZURE_AI_MODEL=your-deployment-name
+AZURE_AI_MODEL=your-model-deployment
 ```
 
-The aliases `PROJECT_ENDPOINT`, `AZURE_API_KEY`, and `MODEL_NAME` are also supported.
+Atmos extracts readable PDF text and sends it to the configured model for a structured estimate. Scanned/image-only PDFs require OCR before upload. Results are decision-support estimates and should be reviewed before formal reporting.
 
-The application derives the resource's OpenAI-compatible endpoint from the project URL. PDF text is extracted by the backend, structured bill-level estimates are persisted, and previously analyzed bills are not sent again. Estimates are decision-support information and should be reviewed before formal emissions reporting. Scanned image-only PDFs require OCR before upload.
+## Test and verify
 
-### Google Drive imports
+```bash
+# Backend workflow tests
+pytest
 
-The Bills page can import a PDF from the signed-in user's Google Drive. In Google Cloud, enable the **Google Drive API** and **Google Picker API**, create an OAuth web client and browser API key, then add the frontend origin (such as `http://127.0.0.1:5173`) to the OAuth client's authorized JavaScript origins. Add these values to the backend `.env`:
+# Frontend syntax check and API tests
+cd frontend
+npm run check
+npm test
 
-```dotenv
-GOOGLE_DRIVE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_DRIVE_API_KEY=your-browser-api-key
-# Optional Google Cloud project number used by Drive Picker.
-GOOGLE_DRIVE_APP_ID=your-project-number
+# Production health endpoint after Docker starts
+curl http://localhost:8000/health
 ```
 
-When a user selects **Add from Google Drive**, the browser requests a short-lived, read-only Drive token, downloads the selected PDF, and sends it through the existing bill-upload checks. Atmos does not store Google tokens or retain ongoing access to a user's Drive.
+## Deploy to Render
 
-## Transactional email
+`render.yaml` defines a Docker web service. If this repository contains `project/` as a subdirectory, set Render's **Root Directory** to `project`.
 
-Atmos can send a welcome email after public sign-up and a receipt after a verified credit purchase. Configure any SMTP provider in the backend `.env`:
+1. Create a Render Web Service from the repository using Docker.
+2. Ensure the Dockerfile path is `./Dockerfile` relative to the root directory.
+3. Add `NEON_DATABASE_URL` as a secret environment variable.
+4. Add only the optional integration variables for enabled features.
+5. Deploy and verify `GET /health` returns `{"status":"ok"}`.
 
-```dotenv
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_FROM=Atmos <no-reply@example.com>
-SMTP_USERNAME=your-smtp-username
-SMTP_PASSWORD=your-smtp-password
-SMTP_USE_TLS=true
-SMTP_USE_SSL=false
-```
+The container honors Render's `PORT` environment variable. The Docker image does not copy your local `.env` file.
 
-For port 465 providers, set `SMTP_USE_TLS=false` and `SMTP_USE_SSL=true`; for port 587, retain the defaults. Email is optional. If SMTP is not configured or delivery fails, account creation and verified credit purchases still complete; delivery failures are logged. Purchase receipts and emailed reports are sent only after SMTP accepts them.
+For Google Drive, add the exact Render URL—for example `https://your-service.onrender.com`—to the authorized JavaScript origins in Google Cloud.
 
-## In-app help assistant
+## Security notes
 
-Authenticated users can open **Help** in the lower-right corner of the workspace for role-aware guidance about bills, emissions, credit packs, reports, team members, and departments. The assistant is intentionally limited: it cannot view or return department records, initiate payments, alter settings, reveal prompts, handle credentials, or provide legal, financial, or formal compliance advice. The backend rejects secrets, prompt-injection requests, overlong messages, and excessive requests before generating an allow-listed workflow response.
+- Passwords are stored as Argon2 hashes.
+- Sessions are bearer tokens stored as hashes server-side and can be revoked on logout.
+- Credit verification, payment secrets, SMTP credentials, database URLs, and Azure API keys stay on the server.
+- Bill access, team management, analysis, and reports are role- and department-scoped.
+- The in-app help endpoint rejects sensitive credentials, prompt-injection patterns, oversized messages, and excessive requests.
