@@ -1,0 +1,42 @@
+services:
+  - type: web
+    name: atmos
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: NEON_DATABASE_URL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_FROM
+        sync: false
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_USE_TLS
+        value: "true"
+      - key: SMTP_USE_SSL
+        value: "false"
+      - key: GOOGLE_DRIVE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_DRIVE_API_KEY
+        sync: false
+      - key: GOOGLE_DRIVE_APP_ID
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: AZURE_AI_PROJECT_ENDPOINT
+        sync: false
+      - key: AZURE_AI_API_KEY
+        sync: false
+      - key: AZURE_AI_MODEL
+        sync: false

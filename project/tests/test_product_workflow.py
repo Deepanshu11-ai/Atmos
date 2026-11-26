@@ -150,7 +150,7 @@ class ProductWorkflowTest(unittest.TestCase):
         self.assertEqual(plans["starter"]["currency"], "INR")
         purchase = self.purchase(alice, "starter", alice_sales)
         self.assertEqual(purchase.status_code, 201, purchase.text)
-        self.assertEqual(purchase.json()["price_cents"], 99900)
+        self.assertEqual(purchase.json()["price_cents"], 100)
         self.assertEqual(purchase.json()["currency"], "INR")
         transfer = self.client.post("/admin/credits/transfers", headers=alice, json={
             "from_department_id": alice_sales, "to_department_id": alice_design, "credits": 40,

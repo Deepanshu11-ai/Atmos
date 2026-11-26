@@ -1,0 +1,126 @@
+ATMOS — FULL-STACK WORK DISTRIBUTION
+====================================
+
+Scope: future work only. This document intentionally does not list work that
+has already been completed. It assigns upcoming frontend, backend, database,
+integration, testing, security, and delivery responsibilities across four
+people.
+
+
+1. FOUR-PERSON WORK DISTRIBUTION
+--------------------------------
+
+Person 1 — Frontend product experience owner
+---------------------------------------------
+Responsibilities:
+- Own all customer-facing frontend screens: landing, authentication,
+  dashboards, bills, emissions, credits, reports, teams, and departments.
+- Maintain a responsive, accessible design system and consistent visual states
+  for loading, empty, error, success, disabled, keyboard-focus, and mobile.
+- Integrate API responses into clear UI feedback without changing backend
+  contracts directly.
+- Coordinate browser-based end-to-end acceptance testing with Person 4.
+
+Primary files:
+- frontend/src/legacy-app.js
+- frontend/src/atmos-polish.css
+- frontend/src/style.css
+- frontend/src/api.js
+
+
+Person 2 — Backend accounts, permissions, and credits owner
+------------------------------------------------------------
+Responsibilities:
+- Own authentication, token/session lifecycle, password handling, role-based
+  authorization, account profile rules, and department membership.
+- Own credit plans, payment-order verification, purchase idempotency, shared
+  balances, credit spending, department transfers, and transaction ledgers.
+- Add audit events and clear domain errors for account and credit operations.
+- Ensure sensitive values, payment secrets, and authentication data never
+  appear in frontend responses or logs.
+
+Primary files:
+- app/auth.py
+- app/credits.py
+- app/provision_department.py
+- app/schemas.py
+- app/database.py
+- app/main.py
+
+
+Person 3 — Bills, emissions, reports, and external integrations owner
+----------------------------------------------------------------------
+Responsibilities:
+- Own secure bill upload/download flows, file validation, and department data
+  scoping.
+- Improve emissions analysis reliability, factor traceability, OCR support for
+  scans, and transparent review of AI-generated estimates.
+- Own reports, email delivery, Google Drive import, and AI provider
+  integrations, including failure handling and retry-safe behavior.
+- Document environment variables and provider setup without exposing secrets.
+
+Primary files:
+- app/bills.py
+- app/emissions.py
+- app/reports.py
+- app/mail.py
+- app/support.py
+- app/schemas.py
+
+
+Person 4 — Platform, database, testing, and release owner
+----------------------------------------------------------
+Responsibilities:
+- Own schema migrations, database performance, backup/recovery expectations,
+  configuration safety, and deployment readiness.
+- Expand backend workflow, authorization, transaction, and integration tests.
+- Own frontend checks, production builds, regression testing, accessibility
+  checks, API contract testing, and release verification.
+- Review pull requests for security, observability, documentation, and
+  rollback readiness.
+
+Primary files:
+- app/database.py
+- app/migrations.py
+- app/main.py
+- tests/test_product_workflow.py
+- frontend/tests/api.test.js
+- requirements.txt
+- .env.example
+- README.md
+- postman_collection.json
+
+
+2. SHARED DELIVERY AGREEMENTS
+-----------------------------
+- Define API request/response changes jointly before implementation. Update
+  schemas, backend tests, frontend handling, and API documentation together.
+- Enforce department scoping and role authorization on the backend; the
+  frontend must never be the only protection for a restricted action.
+- Keep provider credentials in environment configuration only. Never commit
+  secrets, access tokens, private keys, or production database URLs.
+- Use migrations for persistent data changes. Do not modify production schema
+  manually or drop customer data as part of a feature rollout.
+- Every feature needs failure handling, validation, auditability where money,
+  credits, bills, or emissions data are involved, and a test plan.
+- Preserve accessibility and reduced-motion support for all frontend work.
+
+
+3. REQUIRED VALIDATION BEFORE MERGE
+-----------------------------------
+Frontend changes:
+  cd frontend && npm run check && npm run build
+
+Frontend API/auth changes:
+  cd frontend && npm test
+
+Backend changes:
+  python3 -m pytest
+
+Cross-stack feature changes:
+  - Run backend tests and frontend checks.
+  - Verify a full role-based workflow manually or through an end-to-end test.
+  - Confirm no environment secret is returned by an API response or shown in
+    browser logs.
+  - Update README.md, .env.example, and postman_collection.json when a setup
+    or API contract changes.

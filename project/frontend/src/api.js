@@ -18,7 +18,7 @@ export function redact(value) {
 }
 
 export async function request(path, { method = 'GET', body, token, onComplete, timeout = 15000, responseType = 'json' } = {}) {
-  if (!/^\/(auth|users|admin|credits|bills|emissions)(\/|\?|$)/.test(path) || path.includes('://') || path.includes('..')) {
+  if (!/^\/(auth|users|admin|credits|bills|emissions|reports|support)(\/|\?|$)/.test(path) || path.includes('://') || path.includes('..')) {
     throw new Error('Use a supported backend endpoint.');
   }
   const started = performance.now();

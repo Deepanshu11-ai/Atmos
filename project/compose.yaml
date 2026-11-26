@@ -1,0 +1,13 @@
+services:
+  atmos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: atmos:local-test
+    env_file:
+      - .env
+    environment:
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    restart: unless-stopped

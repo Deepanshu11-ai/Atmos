@@ -1,10 +1,15 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import logging
+import os
+from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, status
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.auth import (
     SESSION_DURATION,
@@ -19,6 +24,8 @@ from app.auth import (
 from app.bills import router as bill_router
 from app.credits import router as credit_router
 from app.emissions import router as emissions_router
+from app.reports import router as reports_router
+from app.support import router as support_router
 from app.database import CreditAccount, Department, User, UserSession, get_db, get_session_factory
 from app.migrations import initialize_database
 from app.mail import send_welcome_email
@@ -27,13 +34,30 @@ from app.schemas import (
     LoginRequest, RegisterRequest, TokenResponse, UserResponse,
 )
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    factory = get_session_factory()
-    initialize_database(factory.kw["bind"])
-    with factory() as db:
-        bootstrap_admin(db)
+    try:
+        factory = get_session_factory()
+        initialize_database(factory.kw["bind"])
+        with factory() as db:
+            bootstrap_admin(db)
+    except Exception as error:
+        configured = bool(os.getenv("NEON_DATABASE_URL") or os.getenv("DATABASE_URL"))
+        logger.exception("Startup failed (database URL configured: %s)", configured)
+        if not configured:
+            raise RuntimeError(
+                "Database configuration is missing. In Docker Desktop, add "
+                "NEON_DATABASE_URL to the container environment, or start with "
+                "docker compose up --build so Docker reads project/.env."
+            ) from error
+        raise RuntimeError(
+            "Could not connect to the configured PostgreSQL database. Check that "
+            "NEON_DATABASE_URL is complete, has sslmode=require for Neon, and is "
+            "available from this container."
+        ) from error
     yield
 
 
@@ -41,10 +65,37 @@ app = FastAPI(title="Department accounts and credits API", lifespan=lifespan)
 app.include_router(credit_router)
 app.include_router(bill_router)
 app.include_router(emissions_router)
+app.include_router(reports_router)
+app.include_router(support_router)
+
+
+@app.middleware("http")
+async def api_prefix_bridge(request, call_next):
+    """Match the production SPA's /api URLs to the existing FastAPI routes.
+
+    Vite removes /api while proxying locally. In the single-container Docker
+    deployment there is no Vite proxy, so remove that prefix before routing.
+    """
+    path = request.scope["path"]
+    if path == "/api":
+        request.scope["path"] = "/"
+        request.scope["raw_path"] = b"/"
+    elif path.startswith("/api/"):
+        bridged_path = path[4:]
+        request.scope["path"] = bridged_path
+        raw_path = request.scope.get("raw_path", b"")
+        request.scope["raw_path"] = raw_path[4:] if raw_path.startswith(b"/api/") else bridged_path.encode()
+    return await call_next(request)
+
+
+@app.get("/health", include_in_schema=False)
+def health() -> dict[str, str]:
+    """Lightweight Render health check; database setup runs during startup."""
+    return {"status": "ok"}
 
 
 @app.post("/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
+def register(payload: RegisterRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)) -> User:
     """Sign up as an owner; create a department when the team is ready."""
     email = str(payload.email).lower()
     if db.scalar(select(User.user_id).where(func.lower(User.email) == email)) is not None:
@@ -60,7 +111,9 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)) -> User:
         db.rollback()
         raise HTTPException(status_code=409, detail="Email already registered") from None
     db.refresh(user)
-    send_welcome_email(user.name, user.email)
+    # SMTP must not delay account creation, particularly on serverless/cloud
+    # networks where a connection can take several seconds to establish.
+    background_tasks.add_task(send_welcome_email, user.name, user.email)
     return user
 
 
@@ -172,3 +225,22 @@ def list_departments(
         .where(or_(Department.id == admin.department_id, Department.owner_id == admin.user_id))
         .order_by(Department.id)
     ))
+
+
+class SinglePageAppFiles(StaticFiles):
+    """Serve Vite assets and let client-side routes resolve to index.html."""
+
+    async def get_response(self, path: str, scope: dict):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as error:
+            if error.status_code == status.HTTP_404_NOT_FOUND:
+                return await super().get_response("index.html", scope)
+            raise
+
+
+# The Docker image builds the Vite app into this directory. Keeping this mount
+# last ensures every API route above remains handled by FastAPI first.
+frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if frontend_dist.is_dir():
+    app.mount("/", SinglePageAppFiles(directory=frontend_dist, html=True), name="frontend")

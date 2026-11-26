@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+.venv
+__pycache__
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+frontend/node_modules
+frontend/dist
+frontend/.env
+frontend/*.local
+tests
+postman_collection.json
+PROGRESS.md

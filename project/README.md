@@ -11,6 +11,47 @@ python3 -m uvicorn app.main:app --reload --reload-dir app
 
 The existing `.env` supplies `NEON_DATABASE_URL`. Database tables are created or upgraded on startup. No bootstrap admin is required: start with `POST /auth/register` or import `postman_collection.json` and run the requests in order. Optionally, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` can bootstrap the first admin for a fresh database.
 
+## Deploy on Render with Docker
+
+The root `Dockerfile` builds the Vite frontend and serves it from the FastAPI
+container. The browser and API therefore use one domain in production: frontend
+requests to `/api/...` are served by the same application, with no Vite proxy
+required. The container listens on Render's `PORT` and exposes `GET /health`
+for service health checks.
+
+1. Push the repository and create a Render **Web Service** using Docker. If
+   deploying from this `project/` directory, Render can use `render.yaml`; if
+   the repository root is above it, set the service root directory to `project`.
+2. Set the Dockerfile path to `./Dockerfile` and leave the start command empty.
+3. Add the required `NEON_DATABASE_URL` as a Render secret. Add optional SMTP,
+   Google Drive, Razorpay, and Azure variables only for features you enable.
+4. Deploy. The database schema is initialized on startup; do not use a local
+   `.env` file in the image.
+
+For Google Drive in production, add the exact deployed origin to the OAuth
+client's authorized JavaScript origins, for example:
+
+```text
+https://your-service.onrender.com
+```
+
+Do not add a trailing slash. Add the same production origin to any Google OAuth
+consent-screen settings required by your project.
+
+### Run locally with Docker Desktop
+
+Keep the local `.env` file in `project/` (it is excluded from image builds),
+then run:
+
+```bash
+docker compose up --build
+```
+
+This loads `NEON_DATABASE_URL` and any enabled integration variables from
+`project/.env`, publishes the app at `http://localhost:8000`, and avoids having
+to enter each environment variable manually in Docker Desktop. Stop it with
+`docker compose down`.
+
 ## Account workflow
 
 1. `POST /auth/register` with `{"name":"Owner","email":"owner@example.com","password":"a-strong-password"}` creates an owner without a department.
@@ -32,7 +73,7 @@ The department IDs in these examples are illustrative. Owners can assign users t
 | POST | `/credits/spend` | Logged-in user | Spend from own department with `{"credits":5}`; insufficient balance returns 409 |
 | GET | `/admin/credits/transactions` | Admin | View department ledger; optionally specify an owned `?department_id=2` |
 
-Plans defined in `app/credits.py` are **starter** (100 credits, ₹999), **growth** (500 credits, ₹3,999) and **scale** (2,000 credits, ₹12,999). Prices are denominated in INR and stored in the smallest currency unit. The backend creates the order at the catalog price, verifies Razorpay's HMAC signature and captured payment details, and applies each payment once. Credits are shared by users in the chosen department and do not expire. Transfers deduct and add credits atomically, with a ledger entry in each department.
+Plans defined in `app/credits.py` are **starter** (100 credits, ₹1), **growth** (500 credits, ₹10) and **scale** (2,000 credits, ₹20). Prices are denominated in INR and stored in the smallest currency unit. The backend creates the order at the catalog price, verifies Razorpay's HMAC signature and captured payment details, and applies each payment once. Credits are shared by users in the chosen department and do not expire. Transfers deduct and add credits atomically, with a ledger entry in each department.
 
 Configure Razorpay test credentials in the backend `.env`; the secret is never sent to the browser:
 
@@ -83,9 +124,14 @@ SMTP_FROM=Atmos <no-reply@example.com>
 SMTP_USERNAME=your-smtp-username
 SMTP_PASSWORD=your-smtp-password
 SMTP_USE_TLS=true
+SMTP_USE_SSL=false
 ```
 
-Email is optional. If SMTP is not configured or delivery fails, account creation and verified credit purchases still complete; delivery failures are logged. Purchase receipts are marked as sent only after SMTP accepts them, avoiding duplicates when the verification endpoint is retried.
+For port 465 providers, set `SMTP_USE_TLS=false` and `SMTP_USE_SSL=true`; for port 587, retain the defaults. Email is optional. If SMTP is not configured or delivery fails, account creation and verified credit purchases still complete; delivery failures are logged. Purchase receipts and emailed reports are sent only after SMTP accepts them.
+
+## In-app help assistant
+
+Authenticated users can open **Help** in the lower-right corner of the workspace for role-aware guidance about bills, emissions, credit packs, reports, team members, and departments. The assistant is intentionally limited: it cannot view or return department records, initiate payments, alter settings, reveal prompts, handle credentials, or provide legal, financial, or formal compliance advice. The backend rejects secrets, prompt-injection requests, overlong messages, and excessive requests before generating an allow-listed workflow response.
 
 ## Postman
 

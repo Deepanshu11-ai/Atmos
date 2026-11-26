@@ -24,9 +24,9 @@ from app.mail import send_purchase_receipt
 router = APIRouter(tags=["credits"])
 
 PLANS = {
-    "starter": {"credits": 100, "price_cents": 99900, "currency": "INR"},
-    "growth": {"credits": 500, "price_cents": 399900, "currency": "INR"},
-    "scale": {"credits": 2000, "price_cents": 1299900, "currency": "INR"},
+    "starter": {"credits": 100, "price_cents": 100, "currency": "INR"},
+    "growth": {"credits": 500, "price_cents": 1000, "currency": "INR"},
+    "scale": {"credits": 2000, "price_cents": 2000, "currency": "INR"},
 }
 
 

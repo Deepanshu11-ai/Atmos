@@ -8,7 +8,12 @@ from email.message import EmailMessage
 logger = logging.getLogger(__name__)
 
 
-def send_email(recipient: str, subject: str, text: str) -> bool:
+def send_email(
+    recipient: str,
+    subject: str,
+    text: str,
+    attachment: tuple[str, bytes, str] | None = None,
+) -> bool:
     """Deliver an email when SMTP is configured; never interrupt product flows."""
     host = os.getenv("SMTP_HOST")
     sender = os.getenv("SMTP_FROM")
@@ -20,13 +25,22 @@ def send_email(recipient: str, subject: str, text: str) -> bool:
     message["To"] = recipient
     message["Subject"] = subject
     message.set_content(text)
+    if attachment is not None:
+        filename, content, media_type = attachment
+        maintype, subtype = media_type.split("/", 1)
+        message.add_attachment(content, maintype=maintype, subtype=subtype, filename=filename)
     port = int(os.getenv("SMTP_PORT", "587"))
     username = os.getenv("SMTP_USERNAME")
     password = os.getenv("SMTP_PASSWORD")
+    use_ssl = os.getenv("SMTP_USE_SSL", "false").lower() in ("1", "true", "yes")
+    use_tls = os.getenv("SMTP_USE_TLS", "true").lower() not in ("0", "false", "no")
+    if use_ssl and use_tls:
+        logger.warning("SMTP_USE_SSL takes precedence over SMTP_USE_TLS")
     try:
-        with smtplib.SMTP(host, port, timeout=15) as smtp:
+        smtp_factory = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
+        with smtp_factory(host, port, timeout=15) as smtp:
             smtp.ehlo()
-            if os.getenv("SMTP_USE_TLS", "true").lower() not in ("0", "false", "no"):
+            if use_tls and not use_ssl:
                 smtp.starttls()
                 smtp.ehlo()
             if username and password:

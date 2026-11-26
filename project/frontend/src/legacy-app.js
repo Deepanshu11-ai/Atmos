@@ -1,6 +1,8 @@
 import './style.css';
 import './carbon-theme.css';
 import { request } from './api.js';
+import { mountThreePlanet } from './three-planet.js';
+import { enhanceMotion } from './motion-enhancements.js';
 
 const iconPaths = {
   arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
@@ -24,7 +26,12 @@ const iconPaths = {
   file: '<path d="M6 2h8l4 4v16H6z"/><path d="M14 2v5h5M9 13h6M9 17h6"/>',
   upload: '<path d="M12 16V4m-4 4 4-4 4 4M5 14v6h14v-6"/>',
   download: '<path d="M12 4v12m-4-4 4 4 4-4M5 20h14"/>',
+  message: '<path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.8 8.8 0 0 1-3.5-.8L4 20l1.4-3.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/>',
+  send: '<path d="m21 3-7.5 18-3.8-7.7L2 9.5 21 3Z"/><path d="m9.7 13.3 4-4"/>',
   drive: '<path d="m8 3 4 7-4 7H3l4-7-4-7h5Zm4 7 4-7h5l-4 7 4 7h-5l-4-7Zm-4 7h5l4 7H8l-4-7h4Z"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+  play: '<path d="m8 5 11 7-11 7V5Z"/>',
+  gift: '<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M12 8H7.5A2.5 2.5 0 1 1 10 5.5L12 8Zm0 0h4.5A2.5 2.5 0 1 0 14 5.5L12 8Z"/>',
 };
 const icon = (name, size = 20) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`;
 const nav = [
@@ -54,14 +61,20 @@ const visibleNav = () => nav.filter(([key]) => {
 const field = (label, name, type = 'text', attrs = '') => `<label class="field"><span>${label}</span><input name="${name}" type="${type}" ${attrs} required></label>`;
 const toast = () => state.notice ? `<div class="toast ${state.notice.type}" role="${state.notice.type === 'error' ? 'alert' : 'status'}">${icon(state.notice.type === 'error' ? 'close' : 'check', 17)}<span>${esc(state.notice.text)}</span><button data-action="dismiss" aria-label="Dismiss notification">${icon('close', 16)}</button></div>` : '';
 
+function supportAssistant() {
+  const messages = state.supportMessages.length ? state.supportMessages.map((item) => `<div class="support-message ${item.from}"><p>${esc(item.text)}</p>${item.route ? `<button data-route="${item.route}" data-action="close-support">${esc(item.actionLabel || 'Open page')} ${icon('arrow', 14)}</button>` : ''}</div>`).join('') : '<div class="support-message assistant"><p>Hi, I’m Atmos Help. I can guide you through bills, emissions, credit packs, reports, team access, and departments.</p></div>';
+  return `<aside class="support-assistant ${state.supportOpen ? 'is-open' : ''}" aria-label="Atmos Help"><button class="support-launcher" data-action="toggle-support" aria-label="${state.supportOpen ? 'Close' : 'Open'} Atmos Help" aria-expanded="${state.supportOpen}">${icon(state.supportOpen ? 'close' : 'message', 22)}<span>Help</span></button><section class="support-panel" aria-live="polite"><header><span class="support-badge">${icon('shield', 15)} Guardrailed help</span><button data-action="toggle-support" aria-label="Close Atmos Help">${icon('close', 17)}</button></header><div class="support-intro"><strong>How can we help?</strong><p>Get guidance for using Atmos—never share credentials or payment information.</p></div><div class="support-messages">${messages}</div><div class="support-suggestions"><button data-action="support-suggest" data-question="How do I upload a bill?">Upload a bill</button><button data-action="support-suggest" data-question="How do I create a report?">Create a report</button><button data-action="support-suggest" data-question="How do carbon credits work?">Carbon credits</button></div><label class="support-input"><span class="sr-only">Ask Atmos Help</span><input data-support-input maxlength="500" value="${esc(state.supportDraft)}" placeholder="Ask about using Atmos…" ${state.supportBusy ? 'disabled' : ''}><button data-action="support-send" aria-label="Send question" ${state.supportBusy ? 'disabled' : ''}>${icon('send', 17)}</button></label><small>Guidance only. This assistant cannot access records, take payments, or change your workspace.</small></section></aside>`;
+}
+
 const routeFromHash = () => {
   const route = location.hash.slice(1).replace(/^\//, '').split('?')[0];
-  return ['home', 'login', 'register', ...nav.map(([key]) => key)].includes(route) ? route : 'home';
+  return ['home', 'login', 'register', 'ai-cfo', 'privacy', 'terms', ...nav.map(([key]) => key)].includes(route) ? route : 'home';
 };
 const state = {
   route: routeFromHash(), token: sessionStorage.getItem('atmos.token') || '', profile: null,
   plans: {}, departments: [], users: [], bills: [], billsError: '', emissions: null, emissionsError: '', balance: null, transactions: [], department: '',
   busy: false, notice: null, selectedPlan: null, mobileMenu: false, loading: true,
+  supportOpen: false, supportMessages: [], supportDraft: '', supportBusy: false,
   plansLoading: false, plansError: '',
 };
 
@@ -69,6 +82,7 @@ const api = (path, options = {}) => request(path, { token: state.token, ...optio
 let razorpayScript;
 let googleApiScript;
 let googleIdentityScript;
+let googlePickerModule;
 function loadRazorpay() {
   if (window.Razorpay) return Promise.resolve();
   if (!razorpayScript) razorpayScript = new Promise((resolve, reject) => {
@@ -96,14 +110,27 @@ function loadGoogleScript(src, type) {
   else googleIdentityScript = promise;
   return promise;
 }
+function loadGooglePickerModule() {
+  if (googlePickerModule) return googlePickerModule;
+  googlePickerModule = Promise.all([
+    loadGoogleScript('https://apis.google.com/js/api.js', 'api'),
+    loadGoogleScript('https://accounts.google.com/gsi/client', 'identity'),
+  ]).then(() => new Promise((resolve, reject) => {
+    if (!window.gapi) { reject(new Error('Google Drive did not load. Check your connection and try again.')); return; }
+    window.gapi.load('picker', {
+      callback: resolve,
+      onerror: () => reject(new Error('Could not start Google Drive Picker. Check that the Google Picker API is enabled.')),
+      timeout: 10000,
+      ontimeout: () => reject(new Error('Google Drive Picker took too long to load. Please try again.')),
+    });
+  }));
+  return googlePickerModule;
+}
 async function chooseGoogleDrivePdf() {
   const config = await api('/bills/google-drive/config');
   if (!config.configured) throw new Error('Google Drive is not configured. Ask an administrator to add GOOGLE_DRIVE_CLIENT_ID and GOOGLE_DRIVE_API_KEY.');
-  await Promise.all([
-    loadGoogleScript('https://apis.google.com/js/api.js', 'api'),
-    loadGoogleScript('https://accounts.google.com/gsi/client', 'identity'),
-  ]);
-  await new Promise((resolve, reject) => window.gapi.load('picker', { callback: resolve, onerror: () => reject(new Error('Could not start Google Drive Picker.')) }));
+  await loadGooglePickerModule();
+  if (!window.google?.accounts?.oauth2 || !window.google?.picker) throw new Error('Google Drive is not ready. Please refresh the page and try again.');
   const token = await new Promise((resolve, reject) => {
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: config.client_id,
@@ -115,7 +142,7 @@ async function chooseGoogleDrivePdf() {
   });
   const picked = await new Promise((resolve, reject) => {
     const view = new window.google.picker.DocsView(window.google.picker.ViewId.PDFS).setIncludeFolders(true);
-    const picker = new window.google.picker.PickerBuilder().addView(view).setOAuthToken(token).setDeveloperKey(config.api_key).setCallback((data) => {
+    const picker = new window.google.picker.PickerBuilder().addView(view).setOAuthToken(token).setDeveloperKey(config.api_key).setOrigin(window.location.protocol + '//' + window.location.host).setCallback((data) => {
       if (data.action === window.google.picker.Action.PICKED) resolve(data.docs[0]);
       if (data.action === window.google.picker.Action.CANCEL) reject(new Error('Google Drive selection was cancelled.'));
     });
@@ -938,7 +965,7 @@ function landing() {
 
 function authPageWithDepartment() {
   const register = state.route === 'register';
-  return `<div class="auth-layout"><section class="auth-side"><a href="#home" data-route="home">${logo(true)}</a><div class="auth-side-center"><span class="eyebrow-line">A LITTLE SPACE TO DO A LOT</span><h2>Good things<br>start <em>together.</em></h2><p>One place for your people and your possibilities.</p><div class="auth-art"><span class="auth-art-ring"></span><span class="auth-art-star">✳</span><span class="auth-art-small">✦</span></div></div><span class="auth-side-footer">ATMOS · MADE FOR MOMENTUM</span></section><section class="auth-main"><div class="auth-top"><button class="text-action" data-route="home">← Back to home</button><span>${register ? 'Already have an account?' : 'New to Atmos?'} <button class="text-action emphasized" data-route="${register ? 'login' : 'register'}">${register ? 'Log in' : 'Get started'}</button></span></div><div class="auth-form-container"><span class="eyebrow-line"><span class="tiny-star">✳</span> ${register ? 'WELCOME TO ATMOS' : 'WELCOME BACK'}</span><h1>${register ? 'Let’s build something great.' : 'Good to have you back.'}</h1><p>${register ? 'Create your workspace and bring your team along.' : 'Pick up right where you left off.'}</p><form data-form="${register ? 'register' : 'login'}">${register ? field('Your name', 'name', 'text', 'placeholder="Alex Morgan" autocomplete="name" maxlength="255"') + field('Workspace / department name', 'department_name', 'text', 'placeholder="Your team’s name" maxlength="255"') : ''}${field('Work email', 'email', 'email', 'placeholder="you@company.com" autocomplete="username"')}${field('Password', 'password', 'password', `placeholder="${register ? 'At least 8 characters' : 'Your password'}" autocomplete="${register ? 'new-password' : 'current-password'}" ${register ? 'minlength="8" maxlength="128"' : ''}`)}<button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'One moment…' : register ? 'Create my workspace' : 'Log in to my workspace'} ${icon('arrow', 18)}</button></form><div class="auth-footnote">${icon('shield', 16)} Your workspace is yours. We’re glad you’re here.</div></div></section></div>`;
+  return `<div class="auth-layout"><section class="auth-side"><a href="#home" data-route="home">${logo(true)}</a><div class="auth-side-center"><span class="eyebrow-line">CARBON CLARITY, MADE CALM</span><h2>Better decisions<br>begin with <em>perspective.</em></h2><p>A considered workspace for the evidence, teams, and choices that shape your footprint.</p><div class="auth-art"><span class="auth-art-ring"></span><span class="auth-art-star">✳</span><span class="auth-art-small">✦</span></div></div><span class="auth-side-footer">ATMOS · MEASURE · REDUCE · REPORT</span></section><section class="auth-main"><div class="auth-top"><button class="text-action" data-route="home">← Back to home</button><span>${register ? 'Already have an account?' : 'New to Atmos?'} <button class="text-action emphasized" data-route="${register ? 'login' : 'register'}">${register ? 'Log in' : 'Get started'}</button></span></div><div class="auth-form-container"><span class="eyebrow-line"><span class="tiny-star">✳</span> ${register ? 'WELCOME TO ATMOS' : 'WELCOME BACK'}</span><h1>${register ? 'Start with a clearer picture.' : 'Your workspace is ready.'}</h1><p>${register ? 'Create your account, then turn everyday evidence into informed climate action.' : 'Continue measuring, prioritizing, and reporting with confidence.'}</p><form data-form="${register ? 'register' : 'login'}">${register ? field('Your name', 'name', 'text', 'placeholder="Alex Morgan" autocomplete="name" maxlength="255"') + field('Workspace / department name', 'department_name', 'text', 'placeholder="Your team’s name" maxlength="255"') : ''}${field('Work email', 'email', 'email', 'placeholder="you@company.com" autocomplete="username"')}${field('Password', 'password', 'password', `placeholder="${register ? 'At least 8 characters' : 'Your password'}" autocomplete="${register ? 'new-password' : 'current-password'}" ${register ? 'minlength="8" maxlength="128"' : ''}`)}<button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'One moment…' : register ? 'Create my workspace' : 'Log in to my workspace'} ${icon('arrow', 18)}</button></form><div class="auth-footnote">${icon('shield', 16)} Your workspace is yours. We’re glad you’re here.</div></div></section></div>`;
 }
 function authPage() {
   return authPageWithDepartment()
@@ -954,7 +981,7 @@ function departmentSelect() {
 function shell(body) {
   const initials = state.profile.name.trim().split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase();
   const roleLabel = admin() ? 'Workspace admin' : dataOfficer() ? 'Data officer' : 'Compliance manager';
-  return `<div class="workspace"><aside class="app-sidebar"><a href="#home" data-route="home" class="app-logo">${logo()}</a><span class="nav-title">YOUR WORKSPACE</span><nav aria-label="Workspace navigation">${visibleNav().map(([key, label, symbol]) => `<button data-route="${key}" class="side-link ${state.route === key ? 'active' : ''}">${icon(symbol, 19)}<span>${label}</span>${state.route === key ? '<span class="active-pip"></span>' : ''}</button>`).join('')}</nav><div class="sidebar-help"><span class="help-icon">✳</span><h3>More room to grow.</h3><p>Your team’s next big thing is just around the corner.</p><button data-route="purchase">Explore credit packs ${icon('arrow', 15)}</button></div><div class="sidebar-profile"><span class="person-avatar">${esc(initials)}</span><span><strong>${esc(state.profile.name)}</strong><small>${roleLabel}</small></span><button data-action="logout" title="Log out" aria-label="Log out" ${state.busy ? 'disabled' : ''}>${icon('logout', 18)}</button></div></aside><div class="app-main"><header class="app-header"><div class="mobile-app-logo">${logo()}</div><div class="header-greeting">YOUR SPACE TO DO MORE <span>✳</span></div><div class="header-tools">${departmentSelect()}<span class="header-avatar">${esc(initials)}</span><button class="header-signout" data-action="logout" ${state.busy ? 'disabled' : ''}>Sign out</button></div></header><div class="app-content">${toast()}${body}</div><nav class="bottom-nav" aria-label="Mobile workspace navigation">${visibleNav().map(([key, label, symbol]) => `<button data-route="${key}" class="${state.route === key ? 'active' : ''}">${icon(symbol, 20)}<span>${label.split(' ')[0]}</span></button>`).join('')}</nav></div></div>`;
+  return `<div class="workspace"><aside class="app-sidebar"><a href="#home" data-route="home" class="app-logo">${logo()}</a><span class="nav-title">YOUR WORKSPACE</span><nav aria-label="Workspace navigation">${visibleNav().map(([key, label, symbol]) => `<button data-route="${key}" class="side-link ${state.route === key ? 'active' : ''}">${icon(symbol, 19)}<span>${label}</span>${state.route === key ? '<span class="active-pip"></span>' : ''}</button>`).join('')}</nav><section class="sidebar-journey" aria-label="Carbon workflow progress"><span>YOUR CARBON PATH</span><div class="journey-line"><i></i></div><div><b>01</b><strong>Collect evidence</strong><small>Upload bills and records</small></div><div><b>02</b><strong>Measure impact</strong><small>See your carbon picture</small></div><div><b>03</b><strong>Take action</strong><small>Focus reductions where they count</small></div></section><div class="sidebar-help"><span class="help-icon">✳</span><h3>More room to grow.</h3><p>Your team’s next big thing is just around the corner.</p><button data-route="purchase">Explore credit packs ${icon('arrow', 15)}</button></div><div class="sidebar-profile"><span class="person-avatar">${esc(initials)}</span><span><strong>${esc(state.profile.name)}</strong><small>${roleLabel}</small></span><button data-action="logout" title="Log out" aria-label="Log out" ${state.busy ? 'disabled' : ''}>${icon('logout', 18)}</button></div></aside><div class="app-main"><header class="app-header"><div class="mobile-app-logo">${logo()}</div><div class="header-greeting">YOUR SPACE TO DO MORE <span>✳</span></div><div class="header-tools">${departmentSelect()}<span class="header-avatar">${esc(initials)}</span><button class="header-signout" data-action="logout" ${state.busy ? 'disabled' : ''}>Sign out</button></div></header><div class="app-content">${toast()}${body}</div><nav class="bottom-nav" aria-label="Mobile workspace navigation">${visibleNav().map(([key, label, symbol]) => `<button data-route="${key}" class="${state.route === key ? 'active' : ''}">${icon(symbol, 20)}<span>${label.split(' ')[0]}</span></button>`).join('')}</nav></div>${supportAssistant()}</div>`;
 }
 const pageHead = (eyebrow, title, description, action = '') => `<div class="page-head"><div><span class="eyebrow-line"><span class="tiny-star">✳</span> ${eyebrow}</span><h1>${title}</h1><p>${description}</p></div>${action}</div>`;
 function activityRows(limit = 0) {
@@ -994,6 +1021,9 @@ function activity() {
 }
 const fileSize = (bytes) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 function bills() {
+  // Load Google resources while this page is visible, leaving the OAuth popup
+  // request directly tied to the later button click.
+  if (!googlePickerModule) loadGooglePickerModule().catch(() => { googlePickerModule = undefined; });
   const rows = state.billsError ? `<div class="empty-state"><span class="empty-icon">${icon('refresh', 25)}</span><h3>Could not load stored bills.</h3><p>${esc(state.billsError)}</p><button class="subtle-button" data-action="refresh">Try again</button></div>` : state.bills.length ? `<div class="bill-list">${state.bills.map((bill) => `<div class="bill-row"><span class="bill-file-icon">${icon('file', 21)}</span><span class="bill-details"><strong>${esc(bill.filename)}</strong><small>${when(bill.created_at)} · ${fileSize(bill.size_bytes)}</small></span><button class="bill-download" data-action="download-bill" data-bill-id="${bill.id}" data-filename="${esc(bill.filename)}" ${state.busy ? 'disabled' : ''} aria-label="Download ${esc(bill.filename)}">${icon('download', 18)} Download</button></div>`).join('')}</div>` : `<div class="empty-state"><span class="empty-icon">${icon('file', 25)}</span><h3>No bills uploaded yet.</h3><p>Your stored PDF bills will appear here.</p></div>`;
   const upload = `<section class="surface-card bill-upload-card"><span class="overline">ADD SUPPORTING DOCUMENT</span><h2>Upload a bill</h2><p>Select a PDF bill to store securely with this department’s records.</p><form data-form="bill"><label class="file-drop"><input name="file" type="file" accept="application/pdf,.pdf" required><span class="upload-mark">${icon('upload', 24)}</span><strong>Choose a PDF bill</strong><small>PDF only, up to 10 MB</small></label><div class="upload-options"><span>or</span><button class="subtle-button drive-button" type="button" data-action="google-drive" ${state.busy ? 'disabled' : ''}>${icon('drive', 16)} Add from Google Drive</button></div><button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Uploading…' : 'Upload and store bill'} ${icon('arrow', 17)}</button></form></section>`;
   const eyebrow = dataOfficer() ? 'DATA OFFICER WORKSPACE' : 'ADMIN BILL RECORDS';
@@ -1017,7 +1047,7 @@ function emissions() {
   const records = data.records.length ? data.records.slice(0, 6).map((record) => `<div class="emission-record"><span class="record-category">${esc(record.category)}</span><div><strong>${carbon(record.co2e_kg)} CO₂e</strong><p>${esc(record.summary)}</p></div><span class="confidence">${Math.round(Number(record.confidence) * 100)}% confidence</span></div>`).join('') : '<div class="chart-empty">No analyzed bills yet.</div>';
   const actionLabel = state.busy ? 'Updating emissions…' : data.pending_bills ? `Analyze ${data.pending_bills} pending bill${data.pending_bills === 1 ? '' : 's'}` : data.pending_credit_applications ? 'Reconcile carbon credits' : 'All bills analyzed';
   const actionDisabled = state.busy || (!data.pending_bills && !data.pending_credit_applications) || (data.pending_bills && !data.ai_configured);
-  return `${pageHead('COMPLIANCE INTELLIGENCE', 'Your emissions, made clear.', 'See where emissions come from, whether they are improving, and what to do next.', `<button class="pill-button dark" data-action="analyze-emissions" ${actionDisabled ? 'disabled' : ''}>${actionLabel} ${icon('spark', 16)}</button>`)}${!data.ai_configured && data.pending_bills ? '<div class="analytics-alert">Azure analysis is not configured. Set <code>AZURE_AI_PROJECT_ENDPOINT</code>, <code>AZURE_AI_API_KEY</code>, and <code>AZURE_AI_MODEL</code> on the backend.</div>' : ''}${total ? `<section class="carbon-explainer"><div><span>WHAT DOES ${carbon(total).toUpperCase()} CO₂e MEAN?</span><strong>About the same climate impact as driving <em>${count(Math.round(total / 0.21))} km</em> in a typical petrol car.</strong></div><div><span>CARBON CREDITS RETIRED</span><strong><em>${count(data.credits_used)} credit${data.credits_used === 1 ? '' : 's'}</em> deducted at 1 credit per tonne CO₂e.</strong></div><p>CO₂e combines carbon dioxide and other greenhouse gases into one comparable number. Combined emissions are rounded up once: 9.50 tonnes uses 10 credits.</p></section>` : ''}<div class="emission-stats"><article><span>ESTIMATED EMISSIONS</span><strong>${carbon(data.total_co2e_kg)} CO₂e</strong><small>Lower is better</small></article><article><span>BILLS INCLUDED</span><strong>${count(data.analyzed_bills)}</strong><small>${count(data.pending_bills)} still waiting</small></article><article><span>BIGGEST EMISSION SOURCE</span><strong>${esc(data.categories[0]?.category || '—')}</strong><small>${data.categories[0] ? `${(Number(data.categories[0].co2e_kg) / Math.max(total, 1) * 100).toFixed(0)}% of your total` : 'No source data yet'}</small></article></div><div class="analytics-grid"><section class="surface-card trend-card"><div class="card-heading"><div><span class="overline">IS IT GETTING BETTER?</span><h2>Emissions each month</h2><p>Measured in kilograms of CO₂ equivalent</p></div></div>${monthlyGraph}</section><section class="surface-card source-card"><div class="card-heading"><div><span class="overline">WHERE TO ACT FIRST</span><h2>What causes your emissions?</h2><p>Each source shown as a share of the total</p></div></div>${categoryGraph}</section></div><div class="analytics-grid lower"><section class="surface-card"><div class="card-heading"><div><span class="overline">REDUCTION PLAYBOOK</span><h2>Recommended next moves</h2></div></div><ol class="reduction-tips">${suggestions}</ol></section><section class="surface-card"><div class="card-heading"><div><span class="overline">HOW WE CALCULATED IT</span><h2>Bill estimates</h2></div></div><div class="emission-records">${records}</div></section></div>`;
+  return `${pageHead('COMPLIANCE INTELLIGENCE', 'Your emissions, made clear.', 'See where emissions come from, whether they are improving, and what to do next.', `<span class="report-actions"><button class="subtle-button" data-action="download-report" ${state.busy ? 'disabled' : ''}>${icon('download', 16)} Download report</button><button class="pill-button dark" data-action="email-report" ${state.busy ? 'disabled' : ''}>Email report ${icon('arrowUp', 16)}</button><button class="subtle-button" data-action="analyze-emissions" ${actionDisabled ? 'disabled' : ''}>${actionLabel} ${icon('spark', 16)}</button></span>`)}${!data.ai_configured && data.pending_bills ? '<div class="analytics-alert">Azure analysis is not configured. Set <code>AZURE_AI_PROJECT_ENDPOINT</code>, <code>AZURE_AI_API_KEY</code>, and <code>AZURE_AI_MODEL</code> on the backend.</div>' : ''}${total ? `<section class="carbon-explainer"><div><span>WHAT DOES ${carbon(total).toUpperCase()} CO₂e MEAN?</span><strong>About the same climate impact as driving <em>${count(Math.round(total / 0.21))} km</em> in a typical petrol car.</strong></div><div><span>CARBON CREDITS RETIRED</span><strong><em>${count(data.credits_used)} credit${data.credits_used === 1 ? '' : 's'}</em> deducted at 1 credit per tonne CO₂e.</strong></div><p>CO₂e combines carbon dioxide and other greenhouse gases into one comparable number. Combined emissions are rounded up once: 9.50 tonnes uses 10 credits.</p></section>` : ''}<div class="emission-stats"><article><span>ESTIMATED EMISSIONS</span><strong>${carbon(data.total_co2e_kg)} CO₂e</strong><small>Lower is better</small></article><article><span>BILLS INCLUDED</span><strong>${count(data.analyzed_bills)}</strong><small>${count(data.pending_bills)} still waiting</small></article><article><span>BIGGEST EMISSION SOURCE</span><strong>${esc(data.categories[0]?.category || '—')}</strong><small>${data.categories[0] ? `${(Number(data.categories[0].co2e_kg) / Math.max(total, 1) * 100).toFixed(0)}% of your total` : 'No source data yet'}</small></article></div><div class="analytics-grid"><section class="surface-card trend-card"><div class="card-heading"><div><span class="overline">IS IT GETTING BETTER?</span><h2>Emissions each month</h2><p>Measured in kilograms of CO₂ equivalent</p></div></div>${monthlyGraph}</section><section class="surface-card source-card"><div class="card-heading"><div><span class="overline">WHERE TO ACT FIRST</span><h2>What causes your emissions?</h2><p>Each source shown as a share of the total</p></div></div>${categoryGraph}</section></div><div class="analytics-grid lower"><section class="surface-card"><div class="card-heading"><div><span class="overline">REDUCTION PLAYBOOK</span><h2>Recommended next moves</h2></div></div><ol class="reduction-tips">${suggestions}</ol></section><section class="surface-card"><div class="card-heading"><div><span class="overline">HOW WE CALCULATED IT</span><h2>Bill estimates</h2></div></div><div class="emission-records">${records}</div></section></div>`;
 }
 function teamWithDepartment() {
   return `${pageHead('THE PEOPLE BEHIND IT ALL', 'Better with your people.', 'Bring your teammates into your shared workspace.')}<div class="management-grid"><section class="surface-card"><div class="card-heading"><div><span class="overline">YOUR PEOPLE</span><h2>Team members <small class="count-tag">${state.users.length}</small></h2></div></div>${state.users.length ? `<div class="members">${state.users.map((person) => `<div class="member-row"><span class="person-avatar">${esc(person.name.slice(0, 2).toUpperCase())}</span><span><strong>${esc(person.name)}</strong><small>${esc(person.email)}</small></span><em>${esc(person.role)}</em></div>`).join('')}</div>` : `<div class="empty-state"><span class="empty-icon">${icon('people', 25)}</span><h3>Room for more.</h3><p>Add a teammate to get started together.</p></div>`}</section><section class="surface-card form-card"><span class="overline">GROW TOGETHER</span><h2>Add a team member</h2><p>Give someone access to this department’s shared credits.</p><form data-form="user">${field('Full name', 'name', 'text', 'placeholder="Sam Taylor" maxlength="255"')}${field('Email address', 'email', 'email', 'placeholder="sam@company.com"')}${field('Temporary password', 'password', 'password', 'placeholder="At least 8 characters" minlength="8" maxlength="128" autocomplete="new-password"')}<label class="field">Role<select name="role"><option value="employee">Team member</option><option value="admin">Department admin</option></select></label><button class="pill-button dark full-width" type="submit" ${state.busy ? 'disabled' : ''}>${state.busy ? 'Adding…' : 'Add team member'} ${icon('arrow', 17)}</button></form></section></div>`;
@@ -1059,8 +1089,9 @@ function carbonLanding() {
           </div>
           <div class="carbon-proof"><span>${icon('shield', 18)}</span><p><strong>Evidence-led accounting</strong> Every estimate stays connected to its source document.</p></div>
         </div>
-       <div class="carbon-hero-visual" aria-label="Animated carbon globe with floating emissions indicators">
-  <div class="globe-stage">
+        <div class="carbon-hero-visual" aria-label="Interactive carbon globe with floating emissions indicators">
+  <div class="three-planet-host" data-three-planet aria-label="Interactive three-dimensional carbon data planet"></div>
+  <div class="globe-stage" data-globe-stage tabindex="0" aria-label="A three-dimensional carbon globe showing electricity, transport, operations, and waste emissions">
 
     <!-- Atmospheric glow -->
     <div class="globe-atmosphere"></div>
@@ -1156,9 +1187,14 @@ function carbonLanding() {
     <div class="globe-particle particle-three"></div>
 
   </div>
-</div>
+        </div>
       </section>
       <section class="carbon-metrics"><div class="site-container"><span>ONE AUDITABLE WORKFLOW</span><strong>Evidence</strong><i></i><strong>Measurement</strong><i></i><strong>Reduction</strong><i></i><strong>Reporting</strong></div></section>
+      <section class="carbon-signal-strip site-container" aria-label="Atmos platform capabilities">
+        <article><span>01</span><div><strong>Source-linked</strong><p>Every carbon estimate stays connected to its underlying operational evidence.</p></div></article>
+        <article><span>02</span><div><strong>Review-ready</strong><p>Keep assumptions, category detail, and department context visible to your team.</p></div></article>
+        <article><span>03</span><div><strong>Action-focused</strong><p>Move from reporting snapshots to a clear, prioritized reduction path.</p></div></article>
+      </section>
      <section id="how-it-works" class="carbon-workflow site-container">
 
   <div class="workflow-new-heading">
@@ -1518,7 +1554,7 @@ function carbonLanding() {
   </div>
 
 </section>      <section id="why-atmos" class="carbon-manifesto"><div class="site-container manifesto-inner"><div><span class="carbon-kicker light"><i></i> Built for credible action</span><h2>Carbon reporting should create <em>momentum,</em> not paperwork.</h2></div><div class="manifesto-points"><p><b>01</b><span><strong>Traceable by design</strong>Source documents, estimates, and retired credits remain connected.</span></p><p><b>02</b><span><strong>Clear across teams</strong>Department-level access keeps data ownership simple and accountable.</span></p><p><b>03</b><span><strong>Useful beyond compliance</strong>Reduction suggestions turn reporting data into practical next steps.</span></p></div></div></section>
-<section id="pricing" class="carbon-credits-section site-container">
+      <section id="pricing" class="carbon-credits-section site-container">
   <div class="credits-editorial">
     <span class="carbon-kicker">
       <i></i> ACCOUNT FOR RESIDUAL IMPACT
@@ -1530,11 +1566,8 @@ function carbonLanding() {
       <em>Offset responsibly.</em>
     </h2>
 
-    <p>
-      Reduction comes first. When emissions remain, transparent
-      carbon-credit accounting helps you document the next step
-      with confidence.
-    </p>
+    <p>Reduction comes first. When emissions remain, transparent carbon-credit accounting helps you document the next step with confidence.</p>
+    <div class="credits-principles"><span><b>01</b> Measure the baseline</span><span><b>02</b> Reduce what you control</span><span><b>03</b> Account for the remainder</span></div>
 
     <button class="pill-button dark" data-route="${signedInRoute}">
       ${state.profile ? 'View your ledger' : 'Create your workspace'}
@@ -1619,6 +1652,10 @@ function carbonLanding() {
         <em>Better tomorrow.</em>
       </h3>
 
+      <p>Make each reporting cycle more useful than the last.</p>
+
+      <button class="footer-message-action" data-route="${signedInRoute}">${state.profile ? 'Open workspace' : 'Start measuring'} ${icon('arrowUp', 15)}</button>
+
       <span class="footer-message-mark">✳</span>
     </div>
 
@@ -1636,8 +1673,13 @@ function carbonLanding() {
     <span class="footer-bottom-note">
       MEASURE · REDUCE · REPORT
     </span>
+    <span class="footer-legal-links"><button data-route="privacy">Privacy</button><button data-route="terms">Terms</button></span>
   </div>
 </footer>
+<div class="landing-leaf-cascade" aria-hidden="true">
+  <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+  <b class="leaf-bed"></b>
+</div>
   </div>`;
 }
 
@@ -1666,14 +1708,60 @@ function carbonDashboard() {
     <section class="carbon-dashboard-hero">
       <div class="dashboard-footprint"><span><i></i> TOTAL MEASURED FOOTPRINT</span><strong>${carbon(total)}<small>CO₂e</small></strong><p>${data.analyzed_bills ? `Calculated from ${count(data.analyzed_bills)} analyzed source document${data.analyzed_bills === 1 ? '' : 's'}.` : 'Upload evidence to establish your emissions baseline.'}</p><button class="pill-button light" data-route="emissions">Open emissions analysis ${icon('arrow', 17)}</button></div>
       <div class="dashboard-signal"><span>PERIOD SIGNAL</span><div class="signal-mark ${trendClass}">${icon(change !== null && change > 0 ? 'arrowUp' : 'leaf', 30)}</div><strong>${change === null ? 'Baseline forming' : `${Math.abs(change).toFixed(0)}% ${change <= 0 ? 'decrease' : 'increase'}`}</strong><p>${change === null ? 'A second reporting period will reveal your direction of travel.' : `Compared with your previous reporting period.`}</p></div>
-      <div class="dashboard-rings"><span class="ring-one"></span><span class="ring-two"></span><span class="ring-core">${icon('leaf', 34)}</span></div>
+      <div class="dashboard-rings" aria-hidden="true">
+        <span class="ring-one"></span><span class="ring-two"></span><span class="ring-three"></span>
+        <div class="dashboard-planet">
+          <i class="planet-gridline gridline-one"></i><i class="planet-gridline gridline-two"></i>
+          <i class="planet-continent continent-one"></i><i class="planet-continent continent-two"></i>
+          <span class="planet-glint"></span>
+          <span class="planet-leaf">${icon('leaf', 28)}</span>
+        </div>
+        <div class="orbit-pod pod-one"><i></i><span>LIVE</span></div>
+        <div class="orbit-pod pod-two"><b>CO₂</b><span>tracked</span></div>
+        <span class="ring-core">${icon('leaf', 28)}</span>
+        <p class="dashboard-visual-caption">Evidence becomes<br><strong>climate clarity.</strong></p>
+      </div>
     </section>
     <div class="carbon-stat-grid"><article><span class="stat-number">01</span><p>Largest source</p><strong>${esc(leading?.category || 'No data yet')}</strong><small>${leading && total ? `${(Number(leading.co2e_kg) / total * 100).toFixed(0)}% of measured emissions` : 'Analyze evidence to identify hotspots'}</small></article><article><span class="stat-number">02</span><p>Evidence status</p><strong>${count(data.analyzed_bills)} analyzed</strong><small>${count(data.pending_bills)} document${data.pending_bills === 1 ? '' : 's'} waiting</small></article><article><span class="stat-number">03</span><p>Carbon accounting</p><strong>${count(data.credits_used)} retired</strong><small>${count(state.balance?.balance)} credits available</small></article></div>
     <div class="dashboard-columns carbon-dashboard-columns"><section class="surface-card carbon-action-card"><div class="card-heading"><div><span class="overline">NEXT BEST ACTIONS</span><h2>Keep your inventory moving</h2></div></div><button data-route="bills"><span class="action-number">01</span><span>${icon('upload', 19)}<b>Upload source evidence</b><small>Add a utility or operational PDF</small></span>${icon('chevron', 17)}</button><button data-route="emissions"><span class="action-number">02</span><span>${icon('cloud', 19)}<b>Review emissions</b><small>Explore sources, trends, and recommendations</small></span>${icon('chevron', 17)}</button>${admin() ? `<button data-route="purchase"><span class="action-number">03</span><span>${icon('leaf', 19)}<b>Manage carbon credits</b><small>Maintain cover for residual emissions</small></span>${icon('chevron', 17)}</button>` : ''}</section><section class="surface-card carbon-ledger-card"><div class="card-heading"><div><span class="overline">CARBON CREDIT LEDGER</span><h2>Recent accounting activity</h2></div><button data-route="activity">View all</button></div>${admin() ? activityRows(3) : '<div class="empty-state"><p>Your administrator manages the department credit ledger.</p></div>'}</section></div>`;
 }
 
+function aiCfoLanding() {
+  return `<div class="ai-cfo-launch">
+    <header class="ai-cfo-header"><div class="ai-cfo-wordmark"><i>✦</i> AI CFO</div><span>PRIVATE PREVIEW · COMING SOON</span><div class="ai-cfo-status"><i></i> Building quietly</div></header>
+    <main class="ai-cfo-main">
+      <div class="ai-cfo-copy"><span class="ai-cfo-kicker">✦ FINANCIAL INTELLIGENCE, REIMAGINED</span><h1>Know what your<br><em>money is telling you.</em></h1><p>A new financial copilot for operating teams—turning cash, spend, and runway into one sharp weekly point of view.</p><div class="ai-cfo-actions"><span class="ai-cfo-coming-soon">Coming soon</span><span>Early access opens shortly</span></div></div>
+      <section class="ai-cfo-preview" aria-label="AI CFO preview"><div class="ai-cfo-preview-top"><span>AI CFO / WEEKLY BRIEF</span><i></i><b>LIVE PREVIEW</b></div><div class="ai-cfo-number"><span>Available runway</span><strong>14.2 <small>months</small></strong><p>Up 1.8 months from last quarter</p></div><div class="ai-cfo-bars"><span style="--bar:78%"></span><span style="--bar:56%"></span><span style="--bar:88%"></span><span style="--bar:66%"></span><span style="--bar:92%"></span><span style="--bar:74%"></span></div><div class="ai-cfo-insight"><span>${icon('spark', 20)}</span><p><b>One useful signal</b>Your supplier costs are rising faster than revenue. Review the top three renewals this month.</p></div></section>
+    </main>
+    <footer>AI CFO · FINANCIAL CLARITY FOR THE NEXT DECISION</footer>
+  </div>`;
+}
+
+function legalPage(type) {
+  const isPrivacy = type === 'privacy';
+  const title = isPrivacy ? 'Privacy, made clear.' : 'Terms for using Atmos.';
+  const intro = isPrivacy
+    ? 'How Atmos handles the information you provide while measuring, reporting, and reducing your organisation’s carbon impact.'
+    : 'The straightforward terms that apply when you access and use the Atmos carbon-intelligence workspace.';
+  const sections = isPrivacy ? [
+    ['Information we collect', 'We collect account information such as your name, work email address, password hash, department details, and the information you choose to upload or enter in the workspace, including bills and carbon-accounting records.'],
+    ['How we use it', 'We use this information to provide the Atmos workspace, maintain department access, generate reports, process requested credit activity, improve reliability, and send operational communications when configured.'],
+    ['Documents and analysis', 'Bills and supporting documents remain associated with the department that uploaded them. When you request analysis, relevant document text may be sent to the configured analysis provider solely to produce the requested carbon estimate.'],
+    ['Sharing and security', 'We do not sell personal information. We share data only with service providers needed to operate enabled features, such as hosting, email delivery, payments, Google Drive imports, and AI analysis. We use reasonable technical and organisational safeguards, but no online service is completely secure.'],
+    ['Your choices', 'You may ask to access, correct, or delete your account information by contacting the workspace administrator or the Atmos team. Your organisation is responsible for ensuring it has the right to upload and manage its workspace data.'],
+  ] : [
+    ['Using the service', 'You may use Atmos only for lawful business purposes and in accordance with your organisation’s authority. Keep account credentials confidential and notify us promptly of any suspected unauthorised access.'],
+    ['Your data', 'You retain responsibility for the information and documents you upload. You confirm that you have the necessary rights to submit them and that they do not violate applicable law or another party’s rights.'],
+    ['Carbon estimates', 'Atmos outputs are decision-support estimates based on available evidence, assumptions, and configured analysis services. They are not legal, financial, audit, tax, or formal compliance advice, and should be independently reviewed before external reporting or material decisions.'],
+    ['Third-party services', 'Optional features may rely on third parties including payment providers, email services, Google Drive, and AI analysis providers. Your use of those features is also subject to the relevant provider terms and privacy notices.'],
+    ['Changes and contact', 'We may update these terms as Atmos evolves. Continuing to use the service after an update means you accept the revised terms. For questions about these terms, contact the Atmos workspace administrator.'],
+  ];
+  return `<main class="legal-page"><header class="legal-header"><a href="#home" data-route="home">${logo()}</a><nav><button data-route="privacy" class="${isPrivacy ? 'active' : ''}">Privacy</button><button data-route="terms" class="${!isPrivacy ? 'active' : ''}">Terms</button><button data-route="home">Back to home ${icon('arrowUp', 15)}</button></nav></header><article class="legal-content"><span class="legal-kicker">ATMOS · ${isPrivacy ? 'PRIVACY POLICY' : 'TERMS OF SERVICE'}</span><h1>${title}</h1><p class="legal-lead">${intro}</p><p class="legal-date">Last updated: ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</p>${sections.map(([heading, text], index) => `<section><span>0${index + 1}</span><div><h2>${heading}</h2><p>${text}</p></div></section>`).join('')}<footer><p>Questions about ${isPrivacy ? 'privacy' : 'these terms'}?</p><a href="mailto:support@atmos.example">Contact Atmos support ${icon('arrowUp', 15)}</a></footer></article></main>`;
+}
+
 function carbonShell(body) {
-  return shell(body)
+  const launchGift = `<button class="ai-cfo-gift" data-route="ai-cfo" aria-label="Discover the new AI CFO project"><span class="ai-cfo-gift-badge">NEW</span>${icon('gift', 21)}<span class="ai-cfo-gift-tooltip">Meet AI CFO</span></button>`;
+  return shell(`${body}${launchGift}`)
     .replace('YOUR WORKSPACE', 'CARBON WORKSPACE')
     .replace('More room to grow.', 'Build a lower-carbon future.')
     .replace('Your team’s next big thing is just around the corner.', 'Measure first, then focus every reduction where it counts.')
@@ -1687,6 +1775,9 @@ function render() {
   if (dataOfficer() && nav.some(([key]) => key === state.route) && state.route !== 'bills') { navigate('bills'); return; }
   const content = {
     home: carbonLanding,
+    'ai-cfo': aiCfoLanding,
+    privacy: () => legalPage('privacy'),
+    terms: () => legalPage('terms'),
     login: carbonAuth,
     register: carbonAuth,
     dashboard: carbonDashboard,
@@ -1697,8 +1788,9 @@ function render() {
     team: admin() ? team : dashboard,
     departments: admin() ? departments : dashboard,
   }[state.route]();
-  app.innerHTML = state.profile && !['home', 'login', 'register'].includes(state.route) ? carbonShell(content) : `${content}${toast()}`;
-if (state.route === 'home') {
+  app.innerHTML = state.profile && !['home', 'login', 'register', 'ai-cfo', 'privacy', 'terms'].includes(state.route) ? carbonShell(content) : `${content}${toast()}`;
+   enhanceMotion(app);
+   if (state.route === 'home') {
 
   const revealItems = app.querySelectorAll(
     '.carbon-hero-copy, ' +
@@ -1754,10 +1846,31 @@ if (state.route === 'home') {
 
     revealItems.forEach(el => observer.observe(el));
 
-  } else {
+   } else {
 
     revealItems.forEach(el => el.classList.add('is-visible'));
 
+   }
+
+  const threePlanet = app.querySelector('[data-three-planet]');
+  mountThreePlanet(threePlanet, { paused: false });
+  const globeStage = app.querySelector('[data-globe-stage]');
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (globeStage && !reducedMotion) {
+    const setGlobeTilt = (event) => {
+      const bounds = globeStage.getBoundingClientRect();
+      const x = ((event.clientX - bounds.left) / bounds.width - .5) * 2;
+      const y = ((event.clientY - bounds.top) / bounds.height - .5) * 2;
+      globeStage.style.setProperty('--globe-tilt-x', `${(-y * 5).toFixed(2)}deg`);
+      globeStage.style.setProperty('--globe-tilt-y', `${(x * 7).toFixed(2)}deg`);
+      globeStage.classList.add('is-tilting');
+    };
+    globeStage.addEventListener('pointermove', setGlobeTilt);
+    globeStage.addEventListener('pointerleave', () => {
+      globeStage.style.removeProperty('--globe-tilt-x');
+      globeStage.style.removeProperty('--globe-tilt-y');
+      globeStage.classList.remove('is-tilting');
+    });
   }
 
 }
@@ -1767,7 +1880,7 @@ if (state.route === 'home') {
   if (source && destination && source.value === destination.value) {
     destination.value = [...destination.options].find((option) => option.value !== source.value)?.value ?? '';
   }
-  document.title = `${state.route === 'home' ? 'Atmos — Carbon intelligence' : `${state.route[0].toUpperCase() + state.route.slice(1)} · Atmos`}`;
+  document.title = state.route === 'home' ? 'Atmos — Carbon intelligence' : state.route === 'ai-cfo' ? 'AI CFO · Atmos' : `${state.route[0].toUpperCase() + state.route.slice(1)} · Atmos`;
 }
 
 window.addEventListener('hashchange', () => {
@@ -1783,10 +1896,30 @@ window.addEventListener('hashchange', () => {
 app.addEventListener('click', (event) => {
   const target = event.target.closest('[data-route], [data-action], [data-select-plan]');
   if (!target || target.disabled) return;
+  if (target.dataset.action === 'close-support') state.supportOpen = false;
   if (target.dataset.route) { event.preventDefault(); navigate(target.dataset.route); }
   if (target.dataset.selectPlan) { state.selectedPlan = target.dataset.selectPlan; render(); }
-  if (target.dataset.action === 'menu') { state.mobileMenu = !state.mobileMenu; render(); }
+   if (target.dataset.action === 'menu') { state.mobileMenu = !state.mobileMenu; render(); }
   if (target.dataset.action === 'dismiss') { state.notice = null; render(); }
+  if (target.dataset.action === 'toggle-support') { state.supportOpen = !state.supportOpen; render(); }
+  if (target.dataset.action === 'support-suggest') {
+    state.supportDraft = target.dataset.question || '';
+    const input = app.querySelector('[data-support-input]');
+    if (input) { input.value = state.supportDraft; input.focus(); }
+  }
+  if (target.dataset.action === 'support-send') {
+    const input = app.querySelector('[data-support-input]');
+    const message = (input?.value || state.supportDraft).trim();
+    if (!message || state.supportBusy) return;
+    state.supportMessages.push({ from: 'user', text: message });
+    state.supportDraft = '';
+    state.supportBusy = true;
+    render();
+    api('/support/chat', { method: 'POST', body: { message } })
+      .then((reply) => { state.supportMessages.push({ from: 'assistant', text: reply.answer, route: reply.route, actionLabel: reply.action_label }); })
+      .catch((error) => { state.supportMessages.push({ from: 'assistant', text: error.message }); })
+      .finally(() => { state.supportBusy = false; render(); });
+  }
   if (target.dataset.action === 'reload-plans') { void loadPlans(); render(); }
   if (target.dataset.action === 'close-modal' && (target === event.target || target.classList.contains('modal-close'))) { state.selectedPlan = null; render(); }
   if (target.dataset.action === 'refresh') execute(async () => { state.plans = await api('/credits/plans', { token: '' }); await refresh(); }, 'Your workspace is up to date.');
@@ -1815,6 +1948,20 @@ app.addEventListener('click', (event) => {
     await api('/bills', { method: 'POST', body });
     await refresh();
   }, 'Your Google Drive PDF has been stored.');
+  if (target.dataset.action === 'download-report') execute(async () => {
+    const query = admin() ? `?department_id=${encodeURIComponent(state.department)}` : '';
+    const reportBlob = await api(`/reports/download${query}`, { responseType: 'blob', timeout: 120000 });
+    const url = URL.createObjectURL(reportBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'atmos-department-report.pdf';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'Your department report has downloaded.');
+  if (target.dataset.action === 'email-report') execute(async () => {
+    const query = admin() ? `?department_id=${encodeURIComponent(state.department)}` : '';
+    await api(`/reports/email${query}`, { method: 'POST', timeout: 120000 });
+  }, 'Your report has been emailed with its PDF attachment.');
   if (target.dataset.action === 'analyze-emissions') execute(async () => {
     const query = admin() ? `?department_id=${encodeURIComponent(state.department)}` : '';
     const result = await api(`/emissions/analyze${query}`, { method: 'POST', timeout: 300000 });
@@ -1835,6 +1982,14 @@ app.addEventListener('change', (event) => {
     state.department = event.target.value;
     execute(refresh);
   }
+});
+app.addEventListener('input', (event) => {
+  if (event.target.matches('[data-support-input]')) state.supportDraft = event.target.value;
+});
+app.addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter' || !event.target.matches('[data-support-input]')) return;
+  event.preventDefault();
+  app.querySelector('[data-action="support-send"]')?.click();
 });
 app.addEventListener('submit', (event) => {
   event.preventDefault();
