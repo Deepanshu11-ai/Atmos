@@ -213,5 +213,9 @@
 @media(max-width:760px){.carbon-hero{display:block;padding-top:48px;min-height:auto}.carbon-hero h1{font-size:clamp(46px,12vw,65px);letter-spacing:-3.6px}.carbon-hero-visual{height:460px;margin:18px 0 35px}.globe-stage{height:460px;width:100%;transform:scale(.78)}.carbon-globe{width:350px;height:350px}.carbon-score{top:7%;left:-2%;transform:scale(.8);transform-origin:left top}.source-chip-one{right:-2%;top:26%}.source-chip-two{bottom:5%;right:6%}.orbit-leaf{bottom:10%;left:7%}.bubble-one{top:5%;right:8%}.bubble-two{right:-3%;top:45%}.bubble-three{bottom:7%;right:22%}.bubble-four{left:3%;top:58%}.carbon-metrics>div{flex-wrap:wrap;justify-content:center;padding-top:15px;padding-bottom:15px;gap:14px}.carbon-section-head{display:block}.carbon-section-head>p{margin:28px 0 0}.workflow-grid{grid-template-columns:1fr}.workflow-grid article,.workflow-grid article+article{padding:28px 0;border-right:0;border-bottom:1px solid #19372d28;min-height:260px}.workflow-icon{margin:35px 0 22px}.manifesto-inner{grid-template-columns:1fr;gap:45px}.carbon-credits-section{grid-template-columns:1fr;gap:45px}.credit-callout{padding-left:25px}}
 @media(prefers-reduced-motion:reduce){.carbon-globe,.globe-orbit,.co2-bubble,.carbon-score,.source-chip,.orbit-leaf,.scroll-reveal{animation:none!important;transition:none!important}.scroll-reveal{opacity:1;transform:none}}
 
-
-
+.atmos-logo {
+  width: 100px;
+  height: 75px;
+  display: block;
+  object-fit: contain;
+}
