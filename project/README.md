@@ -9,7 +9,7 @@ python3 -m pip install -r requirements.txt
 python3 -m uvicorn app.main:app --reload --reload-dir app
 ```
 
-The existing `.env` supplies `NEON_DATABASE_URL`. Database tables are created or upgraded on startup. No bootstrap admin is required: start with `POST /auth/register` or import `postman_collection.json` and run the requests in order. Optionally, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` can bootstrap the first admin for a fresh database.
+The existing `.env` supplies `NEON_DATABASE_URL`. Database tables are created or upgraded on startup. No bootstrap admin is required: start by registering an account in the application or with `POST /auth/register`. Optionally, `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `.env` can bootstrap the first admin for a fresh database.
 
 ## Deploy on Render with Docker
 
@@ -132,7 +132,3 @@ For port 465 providers, set `SMTP_USE_TLS=false` and `SMTP_USE_SSL=true`; for po
 ## In-app help assistant
 
 Authenticated users can open **Help** in the lower-right corner of the workspace for role-aware guidance about bills, emissions, credit packs, reports, team members, and departments. The assistant is intentionally limited: it cannot view or return department records, initiate payments, alter settings, reveal prompts, handle credentials, or provide legal, financial, or formal compliance advice. The backend rejects secrets, prompt-injection requests, overlong messages, and excessive requests before generating an allow-listed workflow response.
-
-## Postman
-
-Import `postman_collection.json` and run its requests in order. It generates unique account emails and department names automatically, so **no admin credentials need to be set**. Each run creates a new owner, two departments, one Data Officer, a 100-credit purchase and a five-credit spend. Set `baseUrl` if the app does not run at `http://127.0.0.1:8000`.
